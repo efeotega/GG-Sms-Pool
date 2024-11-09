@@ -5,7 +5,7 @@ import 'dart:async';
 class CountdownTimerWidget extends StatefulWidget {
   final String startTime; // Example format: 'Nov 9, 2024 3:45 AM'
 
-  const CountdownTimerWidget({Key? key, required this.startTime}) : super(key: key);
+  const CountdownTimerWidget({super.key, required this.startTime});
 
   @override
   _CountdownTimerWidgetState createState() => _CountdownTimerWidgetState();

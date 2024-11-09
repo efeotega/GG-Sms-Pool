@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PricingAdjustmentPage extends StatefulWidget {
-  const PricingAdjustmentPage({Key? key}) : super(key: key);
+  const PricingAdjustmentPage({super.key});
 
   @override
   _PricingAdjustmentPageState createState() => _PricingAdjustmentPageState();
@@ -26,6 +26,7 @@ class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
   bool isLoading = false;
   String? selectedService;
   Map<String, Map<String, int>> priceData = {};
+  @override
   void initState() {
     super.initState();
     _fetchCountries();
@@ -161,7 +162,7 @@ class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
       });
 
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Price updated successfully')));
+          .showSnackBar(const SnackBar(content: Text('Price updated successfully')));
           setState(() {
         isLoading = false;
       });
@@ -171,7 +172,7 @@ class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
       });
       print('Error updating price: $e');
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error updating price')));
+          .showSnackBar(const SnackBar(content: Text('Error updating price')));
     }
   }
 
@@ -295,7 +296,7 @@ class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
                   controller: priceController,
                   decoration: InputDecoration(
                     labelText: 'Enter new price for $selectedService',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   // onChanged: (value) {
@@ -312,7 +313,7 @@ class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
                           _updatePrice(selectedCountry!, selectedService!,
                               int.parse(priceController.text));
                         },
-                        child: Text('Update Price'),
+                        child: const Text('Update Price'),
                       ),
               ],
             ],

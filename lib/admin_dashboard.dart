@@ -6,7 +6,7 @@ import 'package:gg_sms_pool/manual_receipts_page.dart';
 import 'package:gg_sms_pool/utils.dart';
 
 class AdminTasksPage extends StatelessWidget {
-  const AdminTasksPage({Key? key}) : super(key: key);
+  const AdminTasksPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,28 +23,28 @@ class AdminTasksPage extends StatelessWidget {
             title: 'Approve Receipts',
             onTap: () {
               // Navigate to receipt approval page
-              moveToPage(context, ReceiptReviewPage(), false);
+              moveToPage(context, const ReceiptReviewPage(), false);
             },
           ),
           TaskItem(
             title: 'View Financial Reports',
             onTap: () {
               // Navigate to reports page
-              moveToPage(context, FinanceHistoryPage(), false);
+              moveToPage(context, const FinanceHistoryPage(), false);
             },
           ),
           TaskItem(
             title: 'Manage Users',
             onTap: () {
               // Navigate to reports page
-              moveToPage(context, ManageUsersPage(), false);
+              moveToPage(context, const ManageUsersPage(), false);
             },
           ),
           TaskItem(
             title: 'Adjust Number Pricing',
             onTap: () {
               // Navigate to reports page
-              moveToPage(context, PricingAdjustmentPage(), false);
+              moveToPage(context, const PricingAdjustmentPage(), false);
             },
           ),
           
@@ -61,8 +61,8 @@ class TaskItem extends StatelessWidget {
   const TaskItem({
     required this.title,
     required this.onTap,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

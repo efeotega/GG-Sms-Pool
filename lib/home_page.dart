@@ -5,7 +5,6 @@ import 'package:gg_sms_pool/landing_page.dart';
 import 'package:gg_sms_pool/number_history_page.dart';
 import 'package:gg_sms_pool/payment_history.dart';
 import 'package:gg_sms_pool/buy_numbers_page.dart';
-import 'package:gg_sms_pool/fund_account.dart';
 import 'package:gg_sms_pool/manual_payment_page.dart';
 import 'package:gg_sms_pool/utils.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,8 +20,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String userName = '';
   String balance = '0.00';
-  String firstName="John";
-  String lastName="Doe";
+  String firstName = "John";
+  String lastName = "Doe";
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -32,10 +31,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<Map<String, dynamic>> paymentHistory = [];
-Future<void> saveStringToPrefs(String key, String value) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  await prefs.setString(key, value);
-}
+  Future<void> saveStringToPrefs(String key, String value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -50,8 +50,8 @@ Future<void> saveStringToPrefs(String key, String value) async {
           balance = userDoc.data()?['balance']?.toString() ?? '0.00';
           firstName = userDoc.data()?['firstName']?.toString() ?? 'John';
           lastName = userDoc.data()?['lastName']?.toString() ?? 'Doe';
-          saveStringToPrefs("firstName",firstName); 
-          saveStringToPrefs("lastName",lastName);         
+          saveStringToPrefs("firstName", firstName);
+          saveStringToPrefs("lastName", lastName);
         });
 
         // Load payment history from 'payment_history' subcollection
@@ -84,6 +84,18 @@ Future<void> saveStringToPrefs(String key, String value) async {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.phone, color: Colors.white),
+                      SizedBox(width: 5),
+                      Text(
+                        'GG SMS Pool',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                   Text(
                     'Hello, $userName',
                     style: const TextStyle(
@@ -111,7 +123,7 @@ Future<void> saveStringToPrefs(String key, String value) async {
               title: const Text('Buy Numbers'),
               onTap: () {
                 Navigator.pop(context);
-                moveToPage(context, BuyNumbersPage(), false);
+                moveToPage(context, const BuyNumbersPage(), false);
               },
             ),
             ListTile(
@@ -162,6 +174,21 @@ Future<void> saveStringToPrefs(String key, String value) async {
                     icon: const Icon(Icons.menu, color: Colors.blueAccent),
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
+                  const Spacer(),
+                  const Row(
+                    children: [
+                      Icon(Icons.phone, color: Colors.blue),
+                      SizedBox(width: 5),
+                      Text(
+                        'GG SMS Pool',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
                 ],
               ),
               const SizedBox(height: 24),
@@ -205,7 +232,8 @@ Future<void> saveStringToPrefs(String key, String value) async {
                           InkWell(
                             onTap: () {
                               // Navigate to Buy Numbers Page
-                              moveToPage(context, BuyNumbersPage(), false);
+                              moveToPage(
+                                  context, const BuyNumbersPage(), false);
                             },
                             child: const Row(
                               children: [
@@ -223,39 +251,41 @@ Future<void> saveStringToPrefs(String key, String value) async {
                           const Spacer(),
                           InkWell(
                             onTap: () {
-                              // Show a dialog for selecting payment method
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: const Text("Select Payment Method"),
-                                    content: const Text(
-                                        "Choose your preferred payment method."),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(
-                                              context); // Close the dialog
-                                          // Navigate to Fund Account page with card payment
-                                          moveToPage(context,
-                                              const FundAccountPage(), false);
-                                        },
-                                        child: const Text("Card Payment"),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(
-                                              context); // Close the dialog
-                                          // Navigate to a manual payment page or show manual payment options
-                                          moveToPage(context,
+                              moveToPage(context,
                                               const ManualPaymentPage(), false);
-                                        },
-                                        child: const Text("Manual Payment"),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
+                              // Show a dialog for selecting payment method
+                              // showDialog(
+                              //   context: context,
+                              //   builder: (BuildContext context) {
+                              //     return AlertDialog(
+                              //       title: const Text("Select Payment Method"),
+                              //       content: const Text(
+                              //           "Choose your preferred payment method."),
+                              //       actions: [
+                              //         // TextButton(
+                              //         //   onPressed: () {
+                              //         //     Navigator.pop(
+                              //         //         context); // Close the dialog
+                              //         //     // Navigate to Fund Account page with card payment
+                              //         //     moveToPage(context,
+                              //         //         const FundAccountPage(), false);
+                              //         //   },
+                              //         //   child: const Text("Card Payment"),
+                              //         // ),
+                              //         TextButton(
+                              //           onPressed: () {
+                              //             Navigator.pop(
+                              //                 context); // Close the dialog
+                              //             // Navigate to a manual payment page or show manual payment options
+                              //             moveToPage(context,
+                              //                 const ManualPaymentPage(), false);
+                              //           },
+                              //           child: const Text("Manual Payment"),
+                              //         ),
+                              //       ],
+                              //     );
+                              //   },
+                              // );
                             },
                             child: const Row(
                               children: [

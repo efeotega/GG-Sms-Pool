@@ -27,7 +27,7 @@ class _ManualPaymentPageState extends State<ManualPaymentPage> {
 void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Copied to clipboard")),
+      const SnackBar(content: Text("Copied to clipboard")),
     );
   }
   Future<void> _pickReceiptImage() async {
@@ -150,10 +150,10 @@ void _copyToClipboard(BuildContext context, String text) {
               ],
             ),
             const SizedBox(height:10),
-            Icon(Icons.warning,color:Colors.yellow),
-            Text("Don't add description or remark"),
-            Text("Don't send kobo"),
-            Text("Don't add log or crypto related keywords"),
+            const Icon(Icons.warning,color:Colors.yellow),
+            const Text("Don't add description or remark"),
+            const Text("Don't send kobo"),
+            const Text("Don't add log or crypto related keywords"),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               icon: const Icon(Icons.upload_file),

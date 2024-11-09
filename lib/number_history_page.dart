@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class NumberHistoryPage extends StatefulWidget {
-  const NumberHistoryPage({Key? key}) : super(key: key);
+  const NumberHistoryPage({super.key});
 
   @override
   _NumberHistoryPageState createState() => _NumberHistoryPageState();
@@ -19,11 +19,80 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Copied to clipboard")),
+      const SnackBar(content: Text("Copied to clipboard")),
     );
   }
 
-  void cancelSms(String orderId) async {
+  Future<bool> refundBalance(String amount) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print("User is not logged in.");
+        return false;
+      }
+
+      // Fetch the user's current balance
+      final userDocRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDoc = await userDocRef.get();
+
+      if (!userDoc.exists) {
+        print("User document not found.");
+        return false;
+      }
+
+      // Get the user's current balance
+      final int currentBalance = userDoc.data()?['balance'] ?? 0;
+
+      // Calculate the new balance
+      final int newBalance = currentBalance + int.parse(amount);
+
+      // Update the balance in Firestore
+      await userDocRef.update({'balance': newBalance});
+
+      print("Balance refunded successfully. New balance: $newBalance");
+      return true;
+    } catch (e) {
+      print("Error refunding balance: $e");
+      return false;
+    }
+  }
+
+  Future<void> _updateStatusToVoid(String orderId) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print("User is not logged in.");
+        return;
+      }
+
+      // Get the document reference for the specific purchased number
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('purchased_numbers')
+          .where('orderId', isEqualTo: orderId)
+          .limit(1);
+
+      final snapshot = await docRef.get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final DocumentReference purchasedNumberRef =
+            snapshot.docs.first.reference;
+
+        // Update the status field to "void"
+        await purchasedNumberRef.update({'status': 99});
+
+        setState(() {});
+      } else {
+        print("OrderId not found in the database.");
+      }
+    } catch (e) {
+      print("Error updating status to void: $e");
+    }
+  }
+
+  void cancelSms(String orderId, String amount) async {
     var request = http.MultipartRequest(
         'POST', Uri.parse('https://api.smspool.net/sms/cancel'));
     request.fields.addAll(
@@ -34,13 +103,14 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Cancelled Successfully'),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.green,
       ));
+      
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Unable to cancel'),
-        backgroundColor: Colors.red,
-      ));
+      // ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      //   content: Text('Unable to cancel'),
+      //   backgroundColor: Colors.red,
+      // ));
       print(response.reasonPhrase);
     }
   }
@@ -77,6 +147,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                 return ListView.builder(
                   itemCount: purchasedNumbers.length,
                   itemBuilder: (context, index) {
+                    Color backgroundColor = Colors.black;
                     final data =
                         purchasedNumbers[index].data() as Map<String, dynamic>;
                     final number = data['number'] ?? 'Unknown';
@@ -92,6 +163,19 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                         ? DateFormat.yMMMd().add_jm().format(timestamp.toDate())
                         : 'No date available';
 
+                    if (status == 1) {
+                      
+                        backgroundColor = Colors.orangeAccent;
+                    }
+                    if (status == 99) {
+                    
+                        backgroundColor = Colors.grey;
+      
+                    }
+                    if (status == 3) {
+                     
+                        backgroundColor = Colors.green;
+                    }
                     return FutureBuilder<String?>(
                       future: smsCode.isEmpty
                           ? _fetchAndSaveSmsCode(orderId,
@@ -240,11 +324,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                           fontSize: 12,
                                         ),
                                       ),
-                                      backgroundColor: status == 1
-                                          ? Colors.orangeAccent
-                                          : status == 6
-                                              ? Colors.grey
-                                              : Colors.green,
+                                      backgroundColor: backgroundColor,
                                     ),
                                   ],
                                 ),
@@ -262,18 +342,39 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                 Text("Price ₦$price"),
                                 const SizedBox(height: 8),
 
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: () {
-                                      cancelSms(orderId);
-                                    },
-                                    child: const Text(
-                                      "Cancel",
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ),
+                                status != 3 && status != 99
+                                    ? Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: () async {
+                                            cancelSms(orderId, price);
+                                            await _updateStatusToVoid(orderId);
+                                            await refundBalance(price);
+                                          },
+                                          child: const Text(
+                                            "Cancel",
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      )
+                                    : Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      "Order already processed")),
+                                            );
+                                          },
+                                          child: const Text(
+                                            "Cancel",
+                                            style: TextStyle(
+                                                color: Colors.grey),
+                                          ),
+                                        ),
+                                      ),
                               ],
                             ),
                           ),
@@ -341,6 +442,8 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         return "Completed";
       case 6:
         return "Refunded";
+      case 99:
+        return "Cancelled";
       default:
         return "Unknown";
     }

@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class FinanceHistoryPage extends StatefulWidget {
-  const FinanceHistoryPage({Key? key}) : super(key: key);
+  const FinanceHistoryPage({super.key});
 
   @override
   _FinanceHistoryPageState createState() => _FinanceHistoryPageState();

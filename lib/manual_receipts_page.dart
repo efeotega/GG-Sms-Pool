@@ -224,7 +224,7 @@ class _ReceiptReviewPageState extends State<ReceiptReviewPage> {
           onTap: () => Navigator.of(context).pop(),
           child: Dialog(
             backgroundColor: Colors.transparent,
-            insetPadding: EdgeInsets.all(0),
+            insetPadding: const EdgeInsets.all(0),
             child: InteractiveViewer(
               child: Image.network(imageUrl),
             ),

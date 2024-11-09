@@ -320,7 +320,7 @@ class _BuyNumbersPageState extends State<BuyNumbersPage> {
     }
     else{
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error')));
+          .showSnackBar(const SnackBar(content: Text('Error')));
     
     }
   }

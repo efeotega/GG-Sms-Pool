@@ -329,13 +329,13 @@ class _LandingPageState extends State<LandingPage> {
           RichText(
           text: TextSpan(
             children: [
-              TextSpan(
+              const TextSpan(
                 text: 'This site was developed by ',
                 style: TextStyle(color: Colors.amber)
               ),
               TextSpan(
                 text: 'Efe Otega',
-                style: TextStyle(color: Colors.blue),
+                style: const TextStyle(color: Colors.blue),
                 recognizer: TapGestureRecognizer()..onTap = _launchURL,
               ),
             ],

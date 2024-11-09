@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageUsersPage extends StatefulWidget {
-  const ManageUsersPage({Key? key}) : super(key: key);
+  const ManageUsersPage({super.key});
 
   @override
   _ManageUsersPageState createState() => _ManageUsersPageState();
@@ -62,7 +62,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(userEmail),
-                    Text("balance: "+balance.toString()),
+                    Text("balance: $balance"),
                   ],
                 ),
                 trailing: ElevatedButton(
