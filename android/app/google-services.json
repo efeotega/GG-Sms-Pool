@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "737457960695",
+    "project_id": "efeotegadev",
+    "storage_bucket": "efeotegadev.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:737457960695:android:517543e642a38e825805f2",
+        "android_client_info": {
+          "package_name": "com.nerdyapps.gg_sms_pool"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYgnBdNbyH5Bw4ImTJP3Jk2m7MkydRrhs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

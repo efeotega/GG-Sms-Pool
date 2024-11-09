@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "ggsmspool": "efeotegadev",
+    "default": "efeotegadev"
+  },
+  "targets": {
+    "efeotegadev": {
+      "hosting": {
+        "ggsms": ["ggsms"]
+      }
+    }
+  },
+  "etags": {}
+}
+
+
+

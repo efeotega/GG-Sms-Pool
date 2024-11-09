@@ -1,0 +1,40 @@
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "efeotegadev",
+          "configurations": {
+            "android": "1:737457960695:android:517543e642a38e825805f2",
+            "ios": "1:737457960695:ios:f55dec8862ed6b275805f2",
+            "macos": "1:737457960695:ios:f55dec8862ed6b275805f2",
+            "web": "1:737457960695:web:9a080815d82f94d05805f2",
+            "windows": "1:737457960695:web:23bfb66e0d592e635805f2"
+          }
+        }
+      },
+      "android": {
+        "default": {
+          "projectId": "efeotegadev",
+          "appId": "1:737457960695:android:517543e642a38e825805f2",
+          "fileOutput": "android/app/google-services.json"
+        }
+      }
+    }
+  },
+  "hosting": {
+    "target": "ggsms",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
