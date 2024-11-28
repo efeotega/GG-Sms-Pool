@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gg_sms_pool/home_page.dart';
 import 'package:gg_sms_pool/login_page.dart';
 import 'package:gg_sms_pool/utils.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:html' as html;
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -346,7 +346,8 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
    Future<void> _launchURL() async {
-      await launch("https://efeotegadev.web.app");
+     html.window.open("https://efeotegadev.web.app", "_blank");
+      //await launchUrl(Uri.parse("https://efeotegadev.web.app"),mode: LaunchMode.externalApplication);
     
   }
 }

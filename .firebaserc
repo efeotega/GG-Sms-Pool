@@ -6,7 +6,7 @@
   "targets": {
     "efeotegadev": {
       "hosting": {
-        "ggsms": ["ggsms"]
+        "ggsms": ["ggsmssite"]
       }
     }
   },

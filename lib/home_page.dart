@@ -4,10 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gg_sms_pool/landing_page.dart';
 import 'package:gg_sms_pool/number_history_page.dart';
 import 'package:gg_sms_pool/payment_history.dart';
+import 'dart:html' as html;
 import 'package:gg_sms_pool/buy_numbers_page.dart';
 import 'package:gg_sms_pool/manual_payment_page.dart';
 import 'package:gg_sms_pool/utils.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
@@ -75,6 +75,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
+        width:MediaQuery.of(context).size.width*0.6,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -102,11 +103,6 @@ class _HomePageState extends State<HomePage> {
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Balance: ₦$balance',
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ],
               ),
@@ -146,9 +142,10 @@ class _HomePageState extends State<HomePage> {
               leading: const Icon(Icons.admin_panel_settings,
                   color: Colors.blueAccent),
               title: const Text('Contact Admin'),
-              onTap: () {
+              onTap: () async{
                 Navigator.pop(context);
-                launch("https://wa.me/+2349061968658");
+                 html.window.open("https://wa.me/+2349061968658", "_blank");
+                //await launchUrl(Uri.parse("https://wa.me/+2349061968658"),mode: LaunchMode.externalApplication);
               },
             ),
             ListTile(
@@ -175,17 +172,21 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
                   const Spacer(),
-                  const Row(
+                   Row(
                     children: [
                       Icon(Icons.phone, color: Colors.blue),
                       SizedBox(width: 5),
-                      Text(
+                      const Text(
                         'GG SMS Pool',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20
                         ),
                       ),
+                      // Text(
+                      //   balance,
+                      //   style: const TextStyle(color: Colors.white, fontSize: 16),
+                      // ),
                     ],
                   ),
                   const Spacer(),
