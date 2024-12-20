@@ -89,34 +89,50 @@ class _BuyNumbersPageState extends State<BuyNumbersPage> {
     priceData = priceDatal; // Use this in your app logic
   });
 }
- Future<Map<String, Map<String, int>>> fetchPriceData() async {
-    final priceData = <String, Map<String, int>>{};
 
-    try {
-      // Fetch all documents in the "prices" collection
-      final priceCollection =
-          await FirebaseFirestore.instance.collection('prices').get();
+Future<Map<String, Map<String, int>>> fetchPriceData() async {
+  final priceData = <String, Map<String, int>>{};
 
-      // Iterate through each document
-      for (var doc in priceCollection.docs) {
-        final countryName = doc['name'];
-        final servicePrices = doc['prices'];
+  try {
+    // Fetch all documents in the "prices" collection
+    final priceCollection =
+        await FirebaseFirestore.instance.collection('prices').get();
 
-        // Convert the dynamic data to a Map<String, int>
-        if (servicePrices != null) {
-          final priceMap = Map<String, int>.from(servicePrices);
+    // Iterate through each document
+    for (var doc in priceCollection.docs) {
+      final countryName = doc['name'] as String?;
+      final servicePrices = doc['prices'] as Map<String, dynamic>?;
 
-          // Store the data in the main map, keyed by the country name
-          priceData[countryName] = priceMap;
-        }
+      if (countryName != null && servicePrices != null) {
+        // Convert dynamic map to a Map<String, int>, handling nested maps
+        final priceMap = _parsePriceMap(servicePrices);
+        priceData[countryName] = priceMap;
       }
-    } catch (e) {
-      print("Error fetching price data: $e");
-      // Handle the error as needed (e.g., show an alert or return empty data)
     }
-
-    return priceData;
+  } catch (e) {
+    print("Error fetching price data: $e");
   }
+
+  return priceData;
+}
+
+// Helper function to parse prices map recursively
+Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
+  final parsedMap = <String, int>{};
+
+  data.forEach((key, value) {
+    if (value is int) {
+      parsedMap[key] = value;
+    } else if (value is Map<String, dynamic>) {
+      // If value is a nested map, recursively parse it
+      parsedMap.addAll(_parsePriceMap(value));
+    } else {
+      print("Skipping invalid value for key $key: $value");
+    }
+  });
+
+  return parsedMap;
+}
 
 
   // // Price data based on country and service
@@ -421,7 +437,9 @@ class _BuyNumbersPageState extends State<BuyNumbersPage> {
     });
           // Handle error response
           if (response.statusCode.toString() == "422") {
-
+            setState(() {
+              isLoading=false;
+            });
             showNumberOutOfStockDialog(context);
           }
           String responseBody = await response.stream.bytesToString();

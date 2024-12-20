@@ -105,7 +105,6 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         content: Text('Cancelled Successfully'),
         backgroundColor: Colors.green,
       ));
-      
     } else {
       // ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       //   content: Text('Unable to cancel'),
@@ -164,17 +163,13 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                         : 'No date available';
 
                     if (status == 1) {
-                      
-                        backgroundColor = Colors.orangeAccent;
+                      backgroundColor = Colors.orangeAccent;
                     }
                     if (status == 99) {
-                    
-                        backgroundColor = Colors.grey;
-      
+                      backgroundColor = Colors.grey;
                     }
                     if (status == 3) {
-                     
-                        backgroundColor = Colors.green;
+                      backgroundColor = Colors.green;
                     }
                     return FutureBuilder<String?>(
                       future: smsCode.isEmpty
@@ -258,13 +253,21 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                     Expanded(
                                       child: Row(
                                         children: [
-                                          Expanded(
-                                            child: Text(
-                                              "SMS Code: $sms",
-                                              style:
-                                                  const TextStyle(fontSize: 16),
-                                            ),
-                                          ),
+                                          status == 99
+                                              ? const Expanded(
+                                                  child: Text(
+                                                    "SMS Code: cancelled",
+                                                    style: TextStyle(
+                                                        fontSize: 16),
+                                                  ),
+                                                )
+                                              : Expanded(
+                                                  child: Text(
+                                                    "SMS Code: $sms",
+                                                    style: const TextStyle(
+                                                        fontSize: 16),
+                                                  ),
+                                                ),
                                           IconButton(
                                             icon: const Icon(Icons.copy),
                                             onPressed: () =>
@@ -347,9 +350,19 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                         alignment: Alignment.centerRight,
                                         child: TextButton(
                                           onPressed: () async {
-                                            cancelSms(orderId, price);
-                                            await _updateStatusToVoid(orderId);
-                                            await refundBalance(price);
+                                            if (hasFiveMinutesElapsed(date)) {
+                                              cancelSms(orderId, price);
+                                              await _updateStatusToVoid(
+                                                  orderId);
+                                              await refundBalance(price);
+                                            } else {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    "Please wait five minutes to elapse before cancelling your order"),
+                                                backgroundColor: Colors.red,
+                                              ));
+                                            }
                                           },
                                           child: const Text(
                                             "Cancel",
@@ -370,8 +383,8 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                           },
                                           child: const Text(
                                             "Cancel",
-                                            style: TextStyle(
-                                                color: Colors.grey),
+                                            style:
+                                                TextStyle(color: Colors.grey),
                                           ),
                                         ),
                                       ),
@@ -446,6 +459,23 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         return "Cancelled";
       default:
         return "Unknown";
+    }
+  }
+
+  bool hasFiveMinutesElapsed(String dateString) {
+    try {
+      // Replace non-breaking spaces with regular spaces
+      final sanitizedDate = dateString.replaceAll('\u202F', ' ');
+
+      // Parse the input date string
+      final dateTime =
+          DateFormat("MMM d, yyyy h:mm a").parse(sanitizedDate).toLocal();
+
+      // Check if 5 minutes have elapsed
+      return DateTime.now().difference(dateTime).inMinutes >= 5;
+    } catch (e) {
+      print("Error parsing date: $e");
+      return false; // Return false if parsing fails
     }
   }
 }

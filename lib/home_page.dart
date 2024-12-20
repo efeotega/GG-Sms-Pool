@@ -22,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   String balance = '0.00';
   String firstName = "John";
   String lastName = "Doe";
+  int totalDeposited=0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -172,11 +173,11 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
                   const Spacer(),
-                   Row(
+                   const Row(
                     children: [
                       Icon(Icons.phone, color: Colors.blue),
                       SizedBox(width: 5),
-                      const Text(
+                      Text(
                         'GG SMS Pool',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -315,6 +316,7 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.blueAccent),
               ),
               const SizedBox(height: 8),
+               Text("Total Deposited: ₦$totalDeposited"),
               Expanded(
                 child: paymentHistory.isEmpty
                     ? const Center(child: Text('No payment history'))
@@ -326,7 +328,9 @@ class _HomePageState extends State<HomePage> {
                           final date =
                               historyItem['date']?.toDate() ?? DateTime.now();
                           final type = historyItem['type'] ?? 'Unknown';
-
+                          for(int amount in historyItem['amount']??0){
+                            totalDeposited+=amount;
+                          }
                           return ListTile(
                             leading: const Icon(Icons.attach_money,
                                 color: Colors.green),

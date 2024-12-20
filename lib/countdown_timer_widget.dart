@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 
 class CountdownTimerWidget extends StatefulWidget {
-  final String startTime; // Example format: 'Nov 9, 2024 3:45 AM'
+  final String startTime; // Example format: 'Dec 18, 2024 7:38 AM'
 
   const CountdownTimerWidget({super.key, required this.startTime});
 
@@ -22,28 +22,35 @@ class _CountdownTimerWidgetState extends State<CountdownTimerWidget> {
   void initState() {
     super.initState();
     _initializeTimer();
+    print(widget.startTime);
   }
 
-  void _initializeTimer() {
+ void _initializeTimer() {
+  try {
+    // Replace non-breaking spaces with regular spaces
+    final sanitizedStartTime = widget.startTime.replaceAll('\u202F', ' ');
+
     // Parse the start time
-    try {
-      startDateTime = DateFormat("MMM d, yyyy h:mm a").parse(widget.startTime);
+    startDateTime =
+        DateFormat("MMM d, yyyy h:mm a").parse(sanitizedStartTime).toLocal();
 
-      // Calculate the end time by adding 20 minutes
-      endDateTime = startDateTime.add(const Duration(minutes: 20));
+    // Calculate the end time by adding 20 minutes
+    endDateTime = startDateTime.add(const Duration(minutes: 20));
 
-      // Start the countdown
-      _startCountdown();
-    } catch (e) {
-      print("Error parsing date: $e");
-      setState(() {
-        isExpired = true; // If parsing fails, mark as expired
-      });
-    }
+    print("Start Time: $startDateTime");
+    print("End Time: $endDateTime");
+
+    // Start the countdown
+    _startCountdown();
+  } catch (e) {
+    print("Error parsing date: $e");
+    setState(() {
+      isExpired = true; // If parsing fails, mark as expired
+    });
   }
+}
 
   void _startCountdown() {
-    // Check if the time has already expired
     if (DateTime.now().isAfter(endDateTime)) {
       setState(() {
         isExpired = true;
@@ -55,7 +62,6 @@ class _CountdownTimerWidgetState extends State<CountdownTimerWidget> {
       setState(() {
         remainingTime = endDateTime.difference(DateTime.now());
 
-        // Check if the time has expired
         if (remainingTime.isNegative) {
           isExpired = true;
           _timer?.cancel();
@@ -76,9 +82,10 @@ class _CountdownTimerWidgetState extends State<CountdownTimerWidget> {
       child: Text(
         isExpired
             ? "Expired"
-            : "${remainingTime.inMinutes}:${(remainingTime.inSeconds % 60).toString().padLeft(2, '0')} remaining",
-        
+            : "${remainingTime.inMinutes}:${(remainingTime.inSeconds % 60).toString().padLeft(2, '0')}",
+        style: const TextStyle(fontSize: 24),
       ),
     );
   }
 }
+

@@ -159,7 +159,7 @@ class _LandingPageState extends State<LandingPage> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Get non-VOIP numbers instantly to receive texts for verification, privacy, and more!',
+            'At GGSMSPool, we pride ourselves on providing the highest quality SMS verifications for your SMS verification needs. We make sure to only provide non-VoIP phone numbers in order to work with any service.\nNo Price Fluctuation\nOur numbers start at 2 cents each, and our prices never fluctuate, even during high demand!',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 18, color: Colors.white), // Keep text color for description
           ),
