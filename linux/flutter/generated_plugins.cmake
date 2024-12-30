@@ -4,8 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
-  paystack_manager_package
-  smart_auth
   url_launcher_linux
 )
 

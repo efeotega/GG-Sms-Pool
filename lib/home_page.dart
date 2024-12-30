@@ -7,6 +7,7 @@ import 'package:gg_sms_pool/payment_history.dart';
 import 'dart:html' as html;
 import 'package:gg_sms_pool/buy_numbers_page.dart';
 import 'package:gg_sms_pool/manual_payment_page.dart';
+import 'package:gg_sms_pool/us_numbers_page.dart';
 import 'package:gg_sms_pool/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,19 +23,29 @@ class _HomePageState extends State<HomePage> {
   String balance = '0.00';
   String firstName = "John";
   String lastName = "Doe";
-  int totalDeposited=0;
+  int totalDeposited = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    calculateTotalDeposited();
   }
 
   List<Map<String, dynamic>> paymentHistory = [];
   Future<void> saveStringToPrefs(String key, String value) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
+  }
+
+  void calculateTotalDeposited() {
+    setState(() {
+      totalDeposited = paymentHistory.fold<int>(
+        0,
+        (sum, historyItem) => sum + ((historyItem['amount'] ?? 0) as int),
+      );
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -67,6 +78,7 @@ class _HomePageState extends State<HomePage> {
           paymentHistory =
               paymentHistorySnapshot.docs.map((doc) => doc.data()).toList();
         });
+        calculateTotalDeposited();
       }
     }
   }
@@ -76,7 +88,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
-        width:MediaQuery.of(context).size.width*0.6,
+        width: MediaQuery.of(context).size.width * 0.6,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -119,8 +131,33 @@ class _HomePageState extends State<HomePage> {
               leading: const Icon(Icons.phone, color: Colors.blueAccent),
               title: const Text('Buy Numbers'),
               onTap: () {
-                Navigator.pop(context);
-                moveToPage(context, const BuyNumbersPage(), false);
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('Select Country'),
+                      //content: const Text('Choose the type of numbers you want to buy:'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context); // Close the dialog
+                            moveToPage(context, const USNumbersPage(),
+                                false); // Navigate to US Numbers
+                          },
+                          child: const Text('US Numbers'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context); // Close the dialog
+                            moveToPage(context, const OtherNumbersPage(),
+                                false); // Navigate to Other Numbers
+                          },
+                          child: const Text('Other Numbers'),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
             ListTile(
@@ -143,9 +180,9 @@ class _HomePageState extends State<HomePage> {
               leading: const Icon(Icons.admin_panel_settings,
                   color: Colors.blueAccent),
               title: const Text('Contact Admin'),
-              onTap: () async{
+              onTap: () async {
                 Navigator.pop(context);
-                 html.window.open("https://wa.me/+2349061968658", "_blank");
+                html.window.open("https://wa.me/+2349061968658", "_blank");
                 //await launchUrl(Uri.parse("https://wa.me/+2349061968658"),mode: LaunchMode.externalApplication);
               },
             ),
@@ -173,21 +210,15 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
                   const Spacer(),
-                   const Row(
+                  const Row(
                     children: [
                       Icon(Icons.phone, color: Colors.blue),
                       SizedBox(width: 5),
                       Text(
                         'GG SMS Pool',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20
-                        ),
+                            fontWeight: FontWeight.bold, fontSize: 20),
                       ),
-                      // Text(
-                      //   balance,
-                      //   style: const TextStyle(color: Colors.white, fontSize: 16),
-                      // ),
                     ],
                   ),
                   const Spacer(),
@@ -233,9 +264,37 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           InkWell(
                             onTap: () {
-                              // Navigate to Buy Numbers Page
-                              moveToPage(
-                                  context, const BuyNumbersPage(), false);
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: const Text('Select Country'),
+                                    //content: const Text('Choose the type of numbers you want to buy:'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(
+                                              context); // Close the dialog
+                                          moveToPage(context, const USNumbersPage(),
+                                              false); // Navigate to US Numbers
+                                        },
+                                        child: const Text('US Numbers'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(
+                                              context); // Close the dialog
+                                          moveToPage(
+                                              context,
+                                              const OtherNumbersPage(),
+                                              false); // Navigate to Other Numbers
+                                        },
+                                        child: const Text('Other Numbers'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
                             },
                             child: const Row(
                               children: [
@@ -253,41 +312,8 @@ class _HomePageState extends State<HomePage> {
                           const Spacer(),
                           InkWell(
                             onTap: () {
-                              moveToPage(context,
-                                              const ManualPaymentPage(), false);
-                              // Show a dialog for selecting payment method
-                              // showDialog(
-                              //   context: context,
-                              //   builder: (BuildContext context) {
-                              //     return AlertDialog(
-                              //       title: const Text("Select Payment Method"),
-                              //       content: const Text(
-                              //           "Choose your preferred payment method."),
-                              //       actions: [
-                              //         // TextButton(
-                              //         //   onPressed: () {
-                              //         //     Navigator.pop(
-                              //         //         context); // Close the dialog
-                              //         //     // Navigate to Fund Account page with card payment
-                              //         //     moveToPage(context,
-                              //         //         const FundAccountPage(), false);
-                              //         //   },
-                              //         //   child: const Text("Card Payment"),
-                              //         // ),
-                              //         TextButton(
-                              //           onPressed: () {
-                              //             Navigator.pop(
-                              //                 context); // Close the dialog
-                              //             // Navigate to a manual payment page or show manual payment options
-                              //             moveToPage(context,
-                              //                 const ManualPaymentPage(), false);
-                              //           },
-                              //           child: const Text("Manual Payment"),
-                              //         ),
-                              //       ],
-                              //     );
-                              //   },
-                              // );
+                              moveToPage(
+                                  context, const ManualPaymentPage(), false);
                             },
                             child: const Row(
                               children: [
@@ -316,7 +342,7 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.blueAccent),
               ),
               const SizedBox(height: 8),
-               Text("Total Deposited: ₦$totalDeposited"),
+              Text("Total Deposited: ₦$totalDeposited"),
               Expanded(
                 child: paymentHistory.isEmpty
                     ? const Center(child: Text('No payment history'))
@@ -328,9 +354,7 @@ class _HomePageState extends State<HomePage> {
                           final date =
                               historyItem['date']?.toDate() ?? DateTime.now();
                           final type = historyItem['type'] ?? 'Unknown';
-                          for(int amount in historyItem['amount']??0){
-                            totalDeposited+=amount;
-                          }
+
                           return ListTile(
                             leading: const Icon(Icons.attach_money,
                                 color: Colors.green),

@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:gg_sms_pool/home_page.dart';
 import 'package:gg_sms_pool/login_page.dart';
@@ -159,7 +158,7 @@ class _LandingPageState extends State<LandingPage> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'At GGSMSPool, we pride ourselves on providing the highest quality SMS verifications for your SMS verification needs. We make sure to only provide non-VoIP phone numbers in order to work with any service.\nNo Price Fluctuation\nOur numbers start at 2 cents each, and our prices never fluctuate, even during high demand!',
+            'At GGSMSPool, we pride ourselves on providing the highest quality SMS verifications for your SMS verification needs.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 18, color: Colors.white), // Keep text color for description
           ),
@@ -326,21 +325,21 @@ class _LandingPageState extends State<LandingPage> {
             ),
           ),
           const SizedBox(height: 30,),
-          RichText(
-          text: TextSpan(
-            children: [
-              const TextSpan(
-                text: 'This site was developed by ',
-                style: TextStyle(color: Colors.amber)
-              ),
-              TextSpan(
-                text: 'Efe Otega',
-                style: const TextStyle(color: Colors.blue),
-                recognizer: TapGestureRecognizer()..onTap = _launchURL,
-              ),
-            ],
-          ),
-        ),
+        //   RichText(
+        //   text: TextSpan(
+        //     children: [
+        //       const TextSpan(
+        //         text: 'This site was developed by ',
+        //         style: TextStyle(color: Colors.amber)
+        //       ),
+        //       TextSpan(
+        //         text: 'Efe Otega',
+        //         style: const TextStyle(color: Colors.blue),
+        //         recognizer: TapGestureRecognizer()..onTap = _launchURL,
+        //       ),
+        //     ],
+        //   ),
+        // ),
         ],
       ),
     );

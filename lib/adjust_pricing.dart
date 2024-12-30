@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PricingAdjustmentPage extends StatefulWidget {
@@ -12,91 +10,30 @@ class PricingAdjustmentPage extends StatefulWidget {
 
 class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
   List<dynamic> countries = [];
-  int? updatedPrice;
-  List<dynamic> filteredCountries = [];
   List<dynamic> services = [];
-  List<dynamic> filteredServices = [];
-  TextEditingController countryController = TextEditingController();
-  TextEditingController serviceController = TextEditingController();
-  TextEditingController priceController = TextEditingController();
-  bool isLoadingServices = false;
-  bool isCountriesVisible = false;
-  bool isServicesVisible = false;
-  String? selectedCountry;
+  TextEditingController searchController = TextEditingController();
   bool isLoading = false;
-  String? selectedService;
   Map<String, Map<String, int>> priceData = {};
+  List<Map<String, dynamic>> displayedData = [];
+
   @override
   void initState() {
     super.initState();
-    _fetchCountries();
     loadPricingData();
-  }
-
-  Future<void> _fetchCountries() async {
-    final url = Uri.parse('https://api.smspool.net/country/retrieve_all');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      setState(() {
-        countries = data;
-        filteredCountries = countries;
-      });
-    }
-  }
-
-  Future<void> _fetchServices(String countryId) async {
-    setState(() {
-      isLoadingServices = true;
-      services = [];
-      filteredServices = [];
-      selectedService = null;
-    });
-
-    final url = Uri.parse(
-        'https://api.smspool.net/service/retrieve_all?country=$countryId');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      setState(() {
-        services = data;
-        filteredServices = services;
-        isLoadingServices = false;
-      });
-    } else {
-      setState(() {
-        isLoadingServices = false;
-      });
-    }
-  }
-
-  Future<void> loadPricingData() async {
-    setState(() {
-      isLoading=true;
-    });
-    priceData = await fetchPriceData();
-    setState(() {
-      isLoading=false;
-    });
   }
 
   Future<Map<String, Map<String, int>>> fetchPriceData() async {
   final priceData = <String, Map<String, int>>{};
 
   try {
-    // Fetch all documents in the "prices" collection
     final priceCollection =
         await FirebaseFirestore.instance.collection('prices').get();
 
-    // Iterate through each document
     for (var doc in priceCollection.docs) {
       final countryName = doc['name'] as String?;
       final servicePrices = doc['prices'] as Map<String, dynamic>?;
 
       if (countryName != null && servicePrices != null) {
-        // Convert dynamic map to a Map<String, int>, handling nested maps
         final priceMap = _parsePriceMap(servicePrices);
         priceData[countryName] = priceMap;
       }
@@ -107,15 +44,27 @@ class _PricingAdjustmentPageState extends State<PricingAdjustmentPage> {
 
   return priceData;
 }
+
 Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
   final parsedMap = <String, int>{};
 
   data.forEach((key, value) {
     if (value is int) {
+      // Direct price mapping
       parsedMap[key] = value;
     } else if (value is Map<String, dynamic>) {
-      // If value is a nested map, recursively parse it
-      parsedMap.addAll(_parsePriceMap(value));
+      // Handle nested providers (e.g., Daisy, SMSPool)
+      value.forEach((providerKey, providerValue) {
+        if (providerValue is int) {
+          parsedMap['$key - $providerKey'] = providerValue;
+        } else if (providerValue is Map<String, dynamic>) {
+          providerValue.forEach((serviceKey, serviceValue) {
+            if (serviceValue is int) {
+              parsedMap['$key - $providerKey - $serviceKey'] = serviceValue;
+            }
+          });
+        }
+      });
     } else {
       print("Skipping invalid value for key $key: $value");
     }
@@ -124,68 +73,163 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
   return parsedMap;
 }
 
-  void _filterCountries(String query) {
-    setState(() {
-      filteredCountries = countries
-          .where((country) => country['name']
-              .toString()
-              .toLowerCase()
-              .contains(query.toLowerCase()))
-          .toList();
+Future<void> loadPricingData() async {
+  setState(() {
+    isLoading = true;
+  });
+  priceData = await fetchPriceData();
+  setState(() {
+    isLoading = false;
+    displayedData = _generateDisplayedData();
+  });
+}
+
+List<Map<String, dynamic>> _generateDisplayedData() {
+  final List<Map<String, dynamic>> data = [];
+  priceData.forEach((country, services) {
+    // Sort services alphabetically
+    final sortedServices = Map.fromEntries(
+      services.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key)),
+    );
+
+    sortedServices.forEach((service, price) {
+      data.add({'country': country, 'service': service, 'price': price});
     });
+  });
+
+  // Sort by country
+  data.sort((a, b) => a['country'].compareTo(b['country']));
+  return data;
+}
+
+void _filterData(String query) {
+  setState(() {
+    displayedData = _generateDisplayedData()
+        .where((item) =>
+            item['country']
+                .toString()
+                .toLowerCase()
+                .contains(query.toLowerCase()) ||
+            item['service']
+                .toString()
+                .toLowerCase()
+                .contains(query.toLowerCase()))
+        .toList();
+  });
+}
+
+  void _showEditDialog(Map<String, dynamic> item) {
+    if (item['country'] == 'United States') {
+      // Show options for Daisy or SMSPool
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(
+                'Select Option for ${item['service']} in ${item['country']}'),
+            content: const Text('Choose a pricing option: Daisy or SMSPool'),
+            actions: [
+              TextButton(
+                onPressed: () => _showPriceInputDialog(item, 'Daisy'),
+                child: const Text('Daisy'),
+              ),
+              TextButton(
+                onPressed: () => _showPriceInputDialog(item, 'SMSPool'),
+                child: const Text('SMSPool'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // Directly allow price editing for other countries
+      _showDirectPriceInputDialog(item);
+    }
   }
 
-  void _filterServices(String query) {
-    setState(() {
-      filteredServices = services
-          .where((service) => service['name']
-              .toString()
-              .toLowerCase()
-              .contains(query.toLowerCase()))
-          .toList();
-    });
-    priceController.text =
-        priceData[selectedCountry]![selectedService]!.toString();
+  void _showPriceInputDialog(Map<String, dynamic> item, String provider) {
+    final TextEditingController priceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+              'Set Price for $provider (${item['service']}) in ${item['country']}'),
+          content: TextField(
+            controller: priceController,
+            decoration: const InputDecoration(labelText: 'Price'),
+            keyboardType: TextInputType.number,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _updateProviderPrice(
+                  item['country'],
+                  item['service'],
+                  provider,
+                  int.parse(priceController.text),
+                );
+                Navigator.pop(context); // Close the input dialog
+                Navigator.pop(context); // Close the provider selection dialog
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  Future<void> _updatePrice(
-      String countryName, String serviceName, int price) async {
+  Future<void> _updateProviderPrice(
+    String countryName,
+    String serviceName,
+    String provider,
+    int price,
+  ) async {
     try {
       setState(() {
         isLoading = true;
       });
-      // Reference to the country document in Firestore
       final countryRef =
           FirebaseFirestore.instance.collection('prices').doc(countryName);
 
-      // Check if the document exists
       final docSnapshot = await countryRef.get();
 
       if (docSnapshot.exists) {
-        // If the document exists, update the price
         await countryRef.update({
-          'prices.$serviceName': price,
+          'prices.$provider.$serviceName': price,
         });
       } else {
-        // If the document doesn't exist, create it with the price data
         await countryRef.set({
-          'name': countryName, // Set country name as part of the document
+          'name': countryName,
           'prices': {
-            serviceName: price, // Set the initial service price
+            provider: {
+              serviceName: price,
+            },
           },
         });
       }
 
-      // Update the local map
       setState(() {
-        priceData[countryName]?[serviceName] = price;
-      });
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Price updated successfully')));
-          setState(() {
+        if (!priceData.containsKey(countryName)) {
+          priceData[countryName] = {};
+        }
+        if (!priceData[countryName]!.containsKey(provider)) {
+          priceData[countryName]![provider] = 0;
+        }
+        priceData[countryName]![serviceName] = price;
+        displayedData = _generateDisplayedData();
         isLoading = false;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Price updated successfully')));
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -196,20 +240,34 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
     }
   }
 
-  void _showPricing(String country, String service) {
-    final countryPrices = priceData[country] ?? {};
-    final price = countryPrices[service] ?? countryPrices['default'] ?? 0;
+  void _showDirectPriceInputDialog(Map<String, dynamic> item) {
+    final TextEditingController priceController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('$service Price in $country'),
-          content: Text('Price: $price'),
+          title: Text('Set Price for ${item['service']} in ${item['country']}'),
+          content: TextField(
+            controller: priceController,
+            decoration: const InputDecoration(labelText: 'Price'),
+            keyboardType: TextInputType.number,
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _updatePrice(
+                  item['country'],
+                  item['service'],
+                  int.parse(priceController.text),
+                );
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
             ),
           ],
         );
@@ -217,133 +275,101 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
     );
   }
 
+  Future<void> _updatePrice(
+      String countryName, String serviceName, int price) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final countryRef =
+          FirebaseFirestore.instance.collection('prices').doc(countryName);
+
+      final docSnapshot = await countryRef.get();
+
+      if (docSnapshot.exists) {
+        await countryRef.update({
+          'prices.$serviceName': price,
+        });
+      } else {
+        await countryRef.set({
+          'name': countryName,
+          'prices': {
+            serviceName: price,
+          },
+        });
+      }
+
+      setState(() {
+        priceData[countryName]?[serviceName] = price;
+        displayedData = _generateDisplayedData();
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Price updated successfully')));
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error updating price: $e');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Error updating price')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Country and Service')),
-      body: isLoading?const Center(child: Column(
-        children: [
-           CircularProgressIndicator(),
-        ],
-      )):Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Search Field for Country
-            TextField(
-              onTap: () {
-                setState(() {
-                  isCountriesVisible = true;
-                });
-              },
-              controller: countryController,
-              onChanged: _filterCountries,
-              decoration: InputDecoration(
-                labelText: 'Search for Country',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      appBar: AppBar(title: const Text('Pricing Adjustment')),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: searchController,
+                    onChanged: _filterData,
+                    decoration: InputDecoration(
+                      labelText: 'Search',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Country')),
+                          DataColumn(label: Text('Service')),
+                          DataColumn(label: Text('Price')),
+                        ],
+                        rows: displayedData
+                            .map((item) => DataRow(cells: [
+                                  DataCell(Text(
+                                    item['country'],
+                                    style: const TextStyle(fontSize: 15),
+                                    ),
+                                      onTap: () => _showEditDialog(item)),
+                                  DataCell(Text(
+                                     style: const TextStyle(fontSize: 15),
+                                    item['service']),
+                                      onTap: () => _showEditDialog(item)),
+                                  DataCell(Text(
+                                    style: const TextStyle(fontSize: 15),
+                                    item['price'].toString()),
+                                      onTap: () => _showEditDialog(item)),
+                                ]))
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-
-            // ListView for Filtered Countries
-            if (isCountriesVisible)
-              Expanded(
-                child: ListView.builder(
-                  itemCount: filteredCountries.length,
-                  itemBuilder: (context, index) {
-                    final country = filteredCountries[index];
-                    return ListTile(
-                      title: Text(country['name']),
-                      onTap: () {
-                        setState(() {
-                          isCountriesVisible = false;
-                          selectedCountry = country['name'];
-                          countryController.text = country["name"];
-                          _fetchServices(country['ID'].toString());
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-
-            const SizedBox(height: 16),
-
-            // Search Field for Service
-            if (selectedCountry != null) ...[
-              TextField(
-                onTap: () {
-                  isServicesVisible = true;
-                },
-                controller: serviceController,
-                onChanged: _filterServices,
-                decoration: InputDecoration(
-                  labelText: 'Search for Service',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Loading Indicator or ListView for Filtered Services
-              isLoadingServices
-                  ? const Center(child: CircularProgressIndicator())
-                  : Expanded(
-                      child: isServicesVisible
-                          ? ListView.builder(
-                              itemCount: filteredServices.length,
-                              itemBuilder: (context, index) {
-                                final service = filteredServices[index];
-                                return ListTile(
-                                  title: Text(service['name']),
-                                  onTap: () {
-                                    setState(() {
-                                      isServicesVisible = false;
-                                      selectedService = service['name'];
-                                      serviceController.text = service['name'];
-                                    });
-                                    _showPricing(
-                                        selectedCountry!, selectedService!);
-                                  },
-                                );
-                              },
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-              if (selectedService != null) ...[
-                TextField(
-                  controller: priceController,
-                  decoration: InputDecoration(
-                    labelText: 'Enter new price for $selectedService',
-                    border: const OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  // onChanged: (value) {
-                  //   setState(() {
-                  //     updatedPrice = int.tryParse(value);
-                  //   });
-                  // },
-                ),
-                const SizedBox(height: 8),
-                isLoading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: () {
-                          _updatePrice(selectedCountry!, selectedService!,
-                              int.parse(priceController.text));
-                        },
-                        child: const Text('Update Price'),
-                      ),
-              ],
-            ],
-          ],
-        ),
-      ),
     );
   }
 }

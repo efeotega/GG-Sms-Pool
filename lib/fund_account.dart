@@ -1,9 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:gg_sms_pool/home_page.dart';
-import 'package:gg_sms_pool/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:paystack_manager_package/paystack_pay_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -143,44 +140,44 @@ Future<String> getStringFromPrefs(String key) async {
                     //  Navigator.of(context).pop();
                     //   },
                     // );
-                    await PaystackPayManager(
-                      context: context,
-                      secretKey:
-                          'sk_live_cb44456a850c7da2ea56e9e7de9c9ba06d471f14',
-                      reference:
-                          "ggsmspool$ref",
-                      amount: amount,
-                      country: 'Nigeria',
-                      currency: 'NGN',
-                      email: FirebaseAuth.instance.currentUser!.email!,
-                      firstName:  await getStringFromPrefs("firstName"),
-                      lastName: await getStringFromPrefs("lastName"),
-                      companyAssetImage: null,
-                      metadata: {},
-                      onSuccessful: (t) async {
-                        setState(() {
-                          isLoading=true;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Payment Successful')),
-                        );
+                    // await PaystackPayManager(
+                    //   context: context,
+                    //   secretKey:
+                    //       'sk_live_cb44456a850c7da2ea56e9e7de9c9ba06d471f14',
+                    //   reference:
+                    //       "ggsmspool$ref",
+                    //   amount: amount,
+                    //   country: 'Nigeria',
+                    //   currency: 'NGN',
+                    //   email: FirebaseAuth.instance.currentUser!.email!,
+                    //   firstName:  await getStringFromPrefs("firstName"),
+                    //   lastName: await getStringFromPrefs("lastName"),
+                    //   companyAssetImage: null,
+                    //   metadata: {},
+                    //   onSuccessful: (t) async {
+                    //     setState(() {
+                    //       isLoading=true;
+                    //     });
+                    //     ScaffoldMessenger.of(context).showSnackBar(
+                    //       const SnackBar(content: Text('Payment Successful')),
+                    //     );
 
-                        // Update balance in Firestore
-                        await _updateUserBalance(amount.toDouble());
-                        //add to user payment history
-                        await _addPaymentToHistory(amount.toDouble());
-                        moveToPage(context, const HomePage(), true);
-                      },
-                      onPending: (t) {},
-                      onFailed: (t) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Payment Failed')));
-                      },
-                      onCancelled: (t) {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Payment Cancelled')));
-                      },
-                    ).initialize();
+                    //     // Update balance in Firestore
+                    //     await _updateUserBalance(amount.toDouble());
+                    //     //add to user payment history
+                    //     await _addPaymentToHistory(amount.toDouble());
+                    //     moveToPage(context, const HomePage(), true);
+                    //   },
+                    //   onPending: (t) {},
+                    //   onFailed: (t) {
+                    //     ScaffoldMessenger.of(context).showSnackBar(
+                    //         const SnackBar(content: Text('Payment Failed')));
+                    //   },
+                    //   onCancelled: (t) {
+                    //      ScaffoldMessenger.of(context).showSnackBar(
+                    //         const SnackBar(content: Text('Payment Cancelled')));
+                    //   },
+                    // ).initialize();
                   } catch (e) {
                     debugPrint(e.toString());
                   }

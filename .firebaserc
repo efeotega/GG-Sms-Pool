@@ -6,12 +6,11 @@
   "targets": {
     "efeotegadev": {
       "hosting": {
-        "ggsms": ["ggsmssite"]
+        "ggsms": [
+          "ggsmssite"
+        ]
       }
     }
   },
   "etags": {}
 }
-
-
-

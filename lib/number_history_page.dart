@@ -15,12 +15,66 @@ class NumberHistoryPage extends StatefulWidget {
 }
 
 class _NumberHistoryPageState extends State<NumberHistoryPage> {
+  String apiKey = "X8PiPQWlxSKYSNcOOWBwYOaze6hgkZ";
   final User? user = FirebaseAuth.instance.currentUser;
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Copied to clipboard")),
     );
+  }
+
+  Future<String> generateCode({
+    required String server,
+    required String orderId,
+    required int status,
+    required List<QueryDocumentSnapshot<Object?>> purchasedNumbers,
+    required int index,
+  }) async {
+    final updatedSms = await _fetchAndSaveSmsCode(
+      server,
+      orderId,
+      purchasedNumbers[index].reference,
+      status,
+    );
+    return updatedSms ?? "";
+  }
+
+  Stream<String> _getCodeStream({
+    required String server,
+    required String orderId,
+    required int status,
+    required List<QueryDocumentSnapshot<Object?>> purchasedNumbers,
+    required int index,
+  }) async* {
+    try {
+      String result = await generateCode(
+        server: server,
+        orderId: orderId,
+        status: status,
+        purchasedNumbers: purchasedNumbers,
+        index: index,
+      );
+
+      yield result; // Emit the initial result
+
+      // Continue emitting every 5 seconds only if the result is "SMS pending"
+      while (result == "SMS pending") {
+        await Future.delayed(const Duration(seconds: 5));
+
+        result = await generateCode(
+          server: server,
+          orderId: orderId,
+          status: status,
+          purchasedNumbers: purchasedNumbers,
+          index: index,
+        );
+
+        yield result;
+      }
+    } catch (e) {
+      yield "Error: $e";
+    }
   }
 
   Future<bool> refundBalance(String amount) async {
@@ -153,6 +207,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                     final service = data['service'] ?? 'Unknown';
                     final orderId = data['orderId'] ?? 'Unknown';
                     final price = data['price'] ?? 'Unknown';
+                    final server = data['server'] ?? 'smspool';
                     final smsCode =
                         data['sms'] ?? ''; // Fetch from Firestore if available
                     final status =
@@ -171,9 +226,10 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                     if (status == 3) {
                       backgroundColor = Colors.green;
                     }
+
                     return FutureBuilder<String?>(
                       future: smsCode.isEmpty
-                          ? _fetchAndSaveSmsCode(orderId,
+                          ? _fetchAndSaveSmsCode(server, orderId,
                               purchasedNumbers[index].reference, status)
                           : Future.value(
                               smsCode), // Use cached SMS if available
@@ -257,15 +313,42 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                               ? const Expanded(
                                                   child: Text(
                                                     "SMS Code: cancelled",
-                                                    style: TextStyle(
-                                                        fontSize: 16),
+                                                    style:
+                                                        TextStyle(fontSize: 16),
                                                   ),
                                                 )
                                               : Expanded(
-                                                  child: Text(
-                                                    "SMS Code: $sms",
-                                                    style: const TextStyle(
-                                                        fontSize: 16),
+                                                  child: StreamBuilder<String>(
+                                                    stream: _getCodeStream(
+                                                        server: server,
+                                                        orderId: orderId,
+                                                        status: status,
+                                                        purchasedNumbers:
+                                                            purchasedNumbers,
+                                                        index: index),
+                                                    builder:
+                                                        (context, snapshot) {
+                                                      if (snapshot.hasData) {
+                                                        return Text(
+                                                          "Sms code: ${snapshot.data!}",
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontSize: 16),
+                                                        );
+                                                      } else if (snapshot
+                                                          .hasError) {
+                                                        return Text(
+                                                          'Error: ${snapshot.error}',
+                                                          style:
+                                                              const TextStyle(
+                                                                  color: Colors
+                                                                      .red),
+                                                        );
+                                                      }
+                                                      return const Center(
+                                                          child:
+                                                              CircularProgressIndicator());
+                                                    },
                                                   ),
                                                 ),
                                           IconButton(
@@ -294,6 +377,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                                 // Call API to fetch the latest SMS code
                                                 final updatedSms =
                                                     await _fetchAndSaveSmsCode(
+                                                  server,
                                                   orderId,
                                                   purchasedNumbers[index]
                                                       .reference,
@@ -335,7 +419,10 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                 const Divider(),
 
                                 // Countdown Timer
-                                CountdownTimerWidget(startTime: date),
+                                CountdownTimerWidget(
+                                  startTime: date,
+                                  minutes: server == "daisysms" ? 7 : 20,
+                                ),
                                 const SizedBox(height: 8),
 
                                 // Purchase Date and Cancel Button
@@ -402,47 +489,88 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
   }
 
   /// Fetch the SMS code from the API and save it to Firestore
-  Future<String?> _fetchAndSaveSmsCode(
-      String orderId, DocumentReference docRef, int status) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://api.smspool.net/sms/check'),
-      );
-      request.fields.addAll({
-        'orderid': orderId,
-        'key': 'yFXHjau7PV6Dox8sA2YD8wD9Ak4kP5pC',
-      });
+  Future<String?> _fetchAndSaveSmsCode(String server, String orderId,
+      DocumentReference docRef, int status) async {
+    if (server == "daisysms") {
+      var url = 'https://api.allorigins.win/get?url=${Uri.encodeComponent(
+              'https://daisysms.com/stubs/handler_api.php?api_key=$apiKey&action=getStatus&id=$orderId')}';
+      try {
+        final response = await http.get(Uri.parse(url));
 
-      http.StreamedResponse response = await request.send();
-
-      if (response.statusCode == 200) {
-        final responseBody = await response.stream.bytesToString();
-        final responseData = json.decode(responseBody);
-
-        if (responseData['status'] == 3) {
-          final smsCode = responseData['sms'] as String;
-
-          // Save SMS to Firestore for caching
-          await docRef.update({
-            'sms': smsCode,
-            'status': 3
-          }); // Update the status to complete if successful
-
-          return smsCode;
-        } else if (responseData['status'] == 1) {
-          return "SMS pending";
-        } else if (responseData['status'] == 6) {
-          return "Order refunded";
+        if (response.statusCode == 200) {
+          final responseBody = response.body.trim();
+          print(responseBody);
+          if (responseBody.startsWith('STATUS_OK')) {
+            return responseBody.split(':')[1]; // Return SMS Code
+          } else if (responseBody == 'NO_ACTIVATION') {
+            return 'Wrong ID';
+          } else if (responseBody == 'STATUS_WAIT_CODE') {
+            print("waiting");
+            return 'Waiting for SMS';
+          } else if (responseBody == 'STATUS_CANCEL') {
+            print("cancelled");
+            return 'Rental cancelled';
+          } else {
+            if (responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "") == "STATUS_WAIT_CODE") {
+              return 'Waiting for SMS';
+            } else if (responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "") == 'NO_ACTIVATION') {
+              return 'Wrong ID';
+            } else if (responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "") == 'STATUS_CANCEL') {
+              return 'Rental cancelled';
+            }
+            else{
+              return responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "");
+            }
+          }
         } else {
-          return "Unknown status";
+          return 'Failed to fetch data. Status Code: ${response.statusCode}';
         }
-      } else {
-        return "Failed to fetch SMS";
+      } catch (e) {
+        return 'Error: $e';
       }
-    } catch (e) {
-      print("Error fetching SMS: $e");
-      return "Error";
+    } else if (server == "smspool") {
+      try {
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('https://api.smspool.net/sms/check'),
+        );
+        request.fields.addAll({
+          'orderid': orderId,
+          'key': 'yFXHjau7PV6Dox8sA2YD8wD9Ak4kP5pC',
+        });
+
+        http.StreamedResponse response = await request.send();
+
+        if (response.statusCode == 200) {
+          final responseBody = await response.stream.bytesToString();
+          final responseData = json.decode(responseBody);
+
+          if (responseData['status'] == 3) {
+            final smsCode = responseData['sms'] as String;
+
+            // Save SMS to Firestore for caching
+            await docRef.update({
+              'sms': smsCode,
+              'status': 3
+            }); // Update the status to complete if successful
+
+            return smsCode;
+          } else if (responseData['status'] == 1) {
+            return "SMS pending";
+          } else if (responseData['status'] == 6) {
+            return "Order refunded";
+          } else {
+            return "Unknown status";
+          }
+        } else {
+          return "Failed to fetch SMS";
+        }
+      } catch (e) {
+        print("Error fetching SMS: $e");
+        return "Error";
+      }
+    } else {
+      return "";
     }
   }
 
