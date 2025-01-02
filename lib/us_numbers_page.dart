@@ -52,9 +52,9 @@ class _USNumbersPageState extends State<USNumbersPage> {
 
       // Reference to the Firestore document
       final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('purchased_numbers')
+          .collection('ggsms_users')
+          .doc(user.email)
+          .collection('ggsms_purchased_numbers')
           .doc();
 
       // Save the number and date
@@ -113,7 +113,7 @@ Future<Map<String, Map<String, int>>> fetchPriceDataExcludeSMSPool() async {
   try {
     // Fetch all documents in the "prices" collection
     final priceCollection =
-        await FirebaseFirestore.instance.collection('prices').get();
+        await FirebaseFirestore.instance.collection('ggsms_prices').get();
 
     for (var doc in priceCollection.docs) {
       final countryName = doc['name'] as String?;
@@ -210,7 +210,7 @@ Future<Map<String, Map<String, int>>> fetchPriceDataExcludeSMSPool() async {
 
       // Fetch the user's current balance
       final userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+          FirebaseFirestore.instance.collection('ggsms_users').doc(user.email);
       final userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {

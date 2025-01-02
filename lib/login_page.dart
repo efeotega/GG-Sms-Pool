@@ -26,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     if (_emailController.text.trim() == "admin@ggsmspool.com" &&
-        _passwordController.text.trim() == "123456") {
+        _passwordController.text.trim() == "tinashe") {
       moveToPage(context, const AdminTasksPage(), true);
     } else {
       try {
@@ -42,8 +42,8 @@ class _LoginPageState extends State<LoginPage> {
         } else if (user != null) {
           // Check if the user is banned in Firestore
           final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
+              .collection('ggsms_users')
+              .doc(user.email)
               .get();
 
           final isBanned = userDoc.data()?['isBanned'] ?? false;

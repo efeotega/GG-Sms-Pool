@@ -32,7 +32,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
         if (user != null) {
           await user.updateDisplayName("${_firstNameController.text} ${_lastNameController.text}");
-          await _saveUserDetailsToFirestore(user.uid);
+          await _saveUserDetailsToFirestore(user.email!);
 
           await user.sendEmailVerification();
           _showVerificationDialog();
@@ -45,8 +45,8 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-  Future<void> _saveUserDetailsToFirestore(String uid) async {
-    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+  Future<void> _saveUserDetailsToFirestore(String email) async {
+    await FirebaseFirestore.instance.collection('ggsms_users').doc(email).set({
       'firstName': _firstNameController.text.trim(),
       'lastName': _lastNameController.text.trim(),
       'email': _emailController.text.trim(),

@@ -23,14 +23,14 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   Future<void> _fetchPaymentHistory() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance.collection('ggsms_users').doc(user.email).get();
 
       if (userDoc.exists) {
         // Load payment history from 'payment_history' subcollection
         final paymentHistorySnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('payment_history')
+            .collection('ggsms_users')
+            .doc(user.email)
+            .collection('ggsms_payment_history')
             .orderBy('date', descending: true)
             .get();
 

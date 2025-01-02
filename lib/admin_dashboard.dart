@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gg_sms_pool/adjust_pricing.dart';
+import 'package:gg_sms_pool/adjust_pricing_smsbus.dart';
+import 'package:gg_sms_pool/adjust_pricing_smspool.dart';
 import 'package:gg_sms_pool/finance_history_page.dart';
 import 'package:gg_sms_pool/manage_users_page.dart';
 import 'package:gg_sms_pool/manual_receipts_page.dart';
@@ -41,10 +42,17 @@ class AdminTasksPage extends StatelessWidget {
             },
           ),
           TaskItem(
-            title: 'Adjust Number Pricing',
+            title: 'Adjust Number Pricing (Sms Pool)',
             onTap: () {
               // Navigate to reports page
-              moveToPage(context, const PricingAdjustmentPage(), false);
+              moveToPage(context, const PricingAdjustmentPageSmsPool(), false);
+            },
+          ),
+          TaskItem(
+            title: 'Adjust Number Pricing (Sms Bus)',
+            onTap: () {
+              // Navigate to reports page
+              moveToPage(context, const PricingAdjustmentPageSmsBus(), false);
             },
           ),
           

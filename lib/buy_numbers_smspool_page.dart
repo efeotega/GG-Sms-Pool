@@ -6,16 +6,16 @@ import 'package:gg_sms_pool/utils.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class OtherNumbersPage extends StatefulWidget {
-  const OtherNumbersPage({super.key});
+class BuyNumbersPageSmsPool extends StatefulWidget {
+  const BuyNumbersPageSmsPool({super.key});
 
   @override
-  _OtherNumbersPageState createState() => _OtherNumbersPageState();
+  _BuyNumbersPageSmsPoolState createState() => _BuyNumbersPageSmsPoolState();
 }
 
-class _OtherNumbersPageState extends State<OtherNumbersPage> {
+class _BuyNumbersPageSmsPoolState extends State<BuyNumbersPageSmsPool> {
   bool isLoading = false;
-  Map<String, Map<String, dynamic>> priceData = {};
+  Map<String, Map<String, int>> priceData = {};
   String searchQuery="";
   bool isCountryDropdownVisible=false;
   bool isServiceDropdownVisible=false;
@@ -82,46 +82,31 @@ class _OtherNumbersPageState extends State<OtherNumbersPage> {
     );
   }
   
- void loadPricingDataExcludeDaisy() async {
+  void loadPricingData() async {
+  
+  var priceDatal = await fetchPriceData();
   setState(() {
-    isLoading = true;
-  });
-
-  var priceDataForNonDaisy = await fetchPriceDataExcludeDaisy();
-
-  setState(() {
-    priceData = priceDataForNonDaisy;
-    isLoading = false;
+    priceData = priceDatal; // Use this in your app logic
   });
 }
 
-
-Future<Map<String, Map<String, int>>> fetchPriceDataExcludeDaisy() async {
+Future<Map<String, Map<String, int>>> fetchPriceData() async {
   final priceData = <String, Map<String, int>>{};
 
   try {
     // Fetch all documents in the "prices" collection
     final priceCollection =
-        await FirebaseFirestore.instance.collection('prices').get();
+        await FirebaseFirestore.instance.collection('ggsms_prices_smspool').get();
 
+    // Iterate through each document
     for (var doc in priceCollection.docs) {
       final countryName = doc['name'] as String?;
       final servicePrices = doc['prices'] as Map<String, dynamic>?;
 
       if (countryName != null && servicePrices != null) {
-        final filteredServices = <String, int>{};
-
-        // Iterate through each service and exclude "Daisy"
-        servicePrices.forEach((service, priceMap) {
-          if (service != 'Daisy' && priceMap is Map<String, dynamic>) {
-            final parsedMap = _parsePriceMap(priceMap);
-            filteredServices.addAll(parsedMap);
-          }
-        });
-
-        if (filteredServices.isNotEmpty) {
-          priceData[countryName] = filteredServices;
-        }
+        // Convert dynamic map to a Map<String, int>, handling nested maps
+        final priceMap = _parsePriceMap(servicePrices);
+        priceData[countryName] = priceMap;
       }
     }
   } catch (e) {
@@ -150,6 +135,28 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
 }
 
 
+  // // Price data based on country and service
+  // final Map<String, Map<String, int>> priceData = {
+  //   'United States': {
+  //     'WhatsApp': 2500,
+  //     'Telegram': 3500,
+  //     'Signal': 1800,
+  //     'OkCupid': 2000,
+  //     'Google/Gmail': 2000,
+  //     'Apple': 1500,
+  //     'default': 1500,
+  //   },
+  //   'United Kingdom': {
+  //     'WhatsApp': 3000,
+  //     'Telegram': 3000,
+  //     'Signal': 1500,
+  //     'Google/Gmail': 2300,
+  //     'Apple': 2000,
+  //     'OkCupid': 1900,
+  //     'default': 2000,
+  //   },
+  // };
+
   @override
   void initState() {
     super.initState();
@@ -157,7 +164,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
     serviceController.addListener(() {
       _filterServices(serviceController.text);
     });
-    loadPricingDataExcludeDaisy();
+    loadPricingData();
   }
 
   Future<bool> deductBalance(String country, String service) async {
@@ -170,7 +177,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
 
       // Fetch the user's current balance
       final userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+          FirebaseFirestore.instance.collection('ggsms_users').doc(user.email);
       final userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
@@ -184,7 +191,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
       // Fetch the price based on country and service, default to 1500 if not found
       final int price = priceData[country]?[service] ??
           priceData[country]?['default'] ??
-          1900;
+          1500;
 
       // Check if user has enough balance
       if (currentBalance < price) {
@@ -220,7 +227,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
 
       // Fetch the user's current balance
       final userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+          FirebaseFirestore.instance.collection('ggsms_users').doc(user.email);
       final userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
@@ -309,52 +316,30 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
   }
 
   void _onServiceChanged(String? value) {
-  setState(() {
-    selectedService = value;
-    isServiceDropdownVisible = false;
-    serviceController.text = value ?? '';
-  });
-
-  if (selectedCountry != null && selectedService != null) {
-    final countryPrices = priceData[selectedCountry] ?? {};
-
-    // Check if the selected service exists at the top level
-    if (countryPrices[selectedService] != null &&
-        countryPrices[selectedService] is int) {
-      setState(() {
-        displayedPrice = countryPrices[selectedService].toString();
-      });
-      return; // Early exit if top-level service found
-    }
-
-    // Check in nested maps explicitly
-    bool foundInNested = false;
-
-    countryPrices.forEach((key, value) {
-      if (value is Map<String, dynamic>) {
-        // Explicitly check if the nested map contains the selected service
-        if (value.containsKey(selectedService) && value[selectedService] is int) {
-          setState(() {
-            displayedPrice = value[selectedService].toString();
-          });
-          foundInNested = true;
-        }
-      }
+    setState(() {
+      selectedService = value;
+      isServiceDropdownVisible=false;
+      serviceController.text=value!;
     });
 
-    // Fallback to default if not found
-    if (!foundInNested) {
+    if (selectedCountry != null && selectedService != null) {
+     
+    
+      // Set the displayed price based on the selected country and service
       setState(() {
-        displayedPrice = (countryPrices['default'] ?? 1900).toString();
+        final countryPrices = priceData[selectedCountry] ?? {};
+     displayedPrice =(countryPrices[selectedService] ?? countryPrices['default'] ?? 1900).toString();
+
+        // displayedPrice =
+        //     '₦${priceData[selectedCountry]?[value] ?? priceData[selectedService]!['default']}';
       });
     }
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Error: Country or Service not selected')),
-    );
+    else{
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Error')));
+    
+    }
   }
-}
-
 
   Future<void> savePurchasedNumber(
       String number, String service, String orderId) async {
@@ -368,8 +353,8 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
 
       // Reference to the Firestore document
       final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
+          .collection('ggsms_users')
+          .doc(user.email)
           .collection('purchased_numbers')
           .doc();
 
@@ -377,8 +362,8 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
       await userRef.set({
         'number': number,
         'service': service,
+        'server':"smspool",
         'orderId': orderId,
-        "server":"smspool",
         'price':displayedPrice,
         'date': FieldValue.serverTimestamp(),
       });

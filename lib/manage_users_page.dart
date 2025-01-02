@@ -16,7 +16,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
   // Set to `false` if `isCurrentlyBanned` is null
   final currentStatus = isCurrentlyBanned ?? false;
 
-  await _firestore.collection('users').doc(userId).update({
+  await _firestore.collection('ggsms_users').doc(userId).update({
     'isBanned': !currentStatus,
   });
 }
@@ -24,7 +24,7 @@ class _ManageUsersPageState extends State<ManageUsersPage> {
 
   // Fetch all users from Firestore
   Stream<QuerySnapshot> getUsersStream() {
-    return _firestore.collection('users').snapshots();
+    return _firestore.collection('ggsms_users').snapshots();
   }
 
   @override

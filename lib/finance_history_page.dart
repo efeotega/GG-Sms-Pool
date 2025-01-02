@@ -27,7 +27,7 @@ class _FinanceHistoryPageState extends State<FinanceHistoryPage> {
 
     try {
       // Fetch all users
-      final usersSnapshot = await firestore.collection('users').get();
+      final usersSnapshot = await firestore.collection('ggsms_users').get();
 
       // Loop through each user to fetch payment history
       for (var userDoc in usersSnapshot.docs) {
@@ -38,9 +38,9 @@ class _FinanceHistoryPageState extends State<FinanceHistoryPage> {
 
         // Fetch the payment history for this user
         final paymentsSnapshot = await firestore
-            .collection('users')
+            .collection('ggsms_users')
             .doc(userId)
-            .collection('payment_history')
+            .collection('ggsms_payment_history')
             .get();
 
         for (var paymentDoc in paymentsSnapshot.docs) {

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gg_sms_pool/buy_numbers_smsbus_page.dart';
+import 'package:gg_sms_pool/buy_numbers_smspool_page.dart';
 import 'package:gg_sms_pool/landing_page.dart';
+import 'package:gg_sms_pool/login_page.dart';
 import 'package:gg_sms_pool/number_history_page.dart';
 import 'package:gg_sms_pool/payment_history.dart';
 import 'dart:html' as html;
-import 'package:gg_sms_pool/buy_numbers_page.dart';
 import 'package:gg_sms_pool/manual_payment_page.dart';
-import 'package:gg_sms_pool/us_numbers_page.dart';
 import 'package:gg_sms_pool/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,6 +32,69 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUserData();
     calculateTotalDeposited();
+    checkIfUserBanned();
+  }
+
+  Future<void> checkIfUserBanned() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      FirebaseAuth.instance.signOut();
+      moveToPage(context, const LoginPage(), true);
+    }
+    final userDoc = await FirebaseFirestore.instance
+        .collection('ggsms_users')
+        .doc(user!.email)
+        .get();
+    if (!userDoc.exists) {
+      FirebaseAuth.instance.signOut();
+      moveToPage(context, const LoginPage(), true);
+    }
+
+    if (!user.emailVerified) {
+      await user.sendEmailVerification();
+      _showVerificationDialog();
+    } else {
+      // Check if the user is banned in Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('ggsms_users')
+          .doc(user.email)
+          .get();
+      if (!userDoc.exists) {
+        FirebaseAuth.instance.signOut();
+        moveToPage(context, const LoginPage(), true);
+      }
+
+      final isBanned = userDoc.data()?['isBanned'] ?? false;
+
+      if (isBanned) {
+        // Show banned dialog
+        _showBannedDialog();
+      }
+    }
+  }
+
+  void _showBannedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Account Banned"),
+          content:
+              const Text("Your account has been banned and you cannot log in."),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                //move back to login page and logout
+                FirebaseAuth.instance.signOut();
+                moveToPage(context, const LandingPage(), true);
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   List<Map<String, dynamic>> paymentHistory = [];
@@ -52,8 +116,8 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
+          .collection('ggsms_users')
+          .doc(user.email)
           .get();
 
       if (userDoc.exists) {
@@ -68,9 +132,9 @@ class _HomePageState extends State<HomePage> {
 
         // Load payment history from 'payment_history' subcollection
         final paymentHistorySnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('payment_history')
+            .collection('ggsms_users')
+            .doc(user.email)
+            .collection('ggsms_payment_history')
             .orderBy('date', descending: true)
             .get();
 
@@ -81,6 +145,25 @@ class _HomePageState extends State<HomePage> {
         calculateTotalDeposited();
       }
     }
+  }
+
+  void _showVerificationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Email Verification Required'),
+        content: const Text(
+          'A verification email has been sent to your email address. '
+          'Please verify your email to proceed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK', style: TextStyle(color: Colors.blueAccent)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -135,24 +218,24 @@ class _HomePageState extends State<HomePage> {
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
-                      title: const Text('Select Country'),
+                      title: const Text('Select Server'),
                       //content: const Text('Choose the type of numbers you want to buy:'),
                       actions: [
                         TextButton(
                           onPressed: () {
                             Navigator.pop(context); // Close the dialog
-                            moveToPage(context, const USNumbersPage(),
+                            moveToPage(context, const BuyNumbersPageSmsPool(),
                                 false); // Navigate to US Numbers
                           },
-                          child: const Text('US Numbers'),
+                          child: const Text('Server 1'),
                         ),
                         TextButton(
                           onPressed: () {
                             Navigator.pop(context); // Close the dialog
-                            moveToPage(context, const OtherNumbersPage(),
+                            moveToPage(context, const BuyNumbersPageSmsBus(),
                                 false); // Navigate to Other Numbers
                           },
-                          child: const Text('Other Numbers'),
+                          child: const Text('Server 2'),
                         ),
                       ],
                     );
@@ -268,17 +351,19 @@ class _HomePageState extends State<HomePage> {
                                 context: context,
                                 builder: (BuildContext context) {
                                   return AlertDialog(
-                                    title: const Text('Select Country'),
+                                    title: const Text('Select Server'),
                                     //content: const Text('Choose the type of numbers you want to buy:'),
                                     actions: [
                                       TextButton(
                                         onPressed: () {
                                           Navigator.pop(
                                               context); // Close the dialog
-                                          moveToPage(context, const USNumbersPage(),
+                                          moveToPage(
+                                              context,
+                                              const BuyNumbersPageSmsPool(),
                                               false); // Navigate to US Numbers
                                         },
-                                        child: const Text('US Numbers'),
+                                        child: const Text('Server 1'),
                                       ),
                                       TextButton(
                                         onPressed: () {
@@ -286,10 +371,10 @@ class _HomePageState extends State<HomePage> {
                                               context); // Close the dialog
                                           moveToPage(
                                               context,
-                                              const OtherNumbersPage(),
+                                              const BuyNumbersPageSmsBus(),
                                               false); // Navigate to Other Numbers
                                         },
-                                        child: const Text('Other Numbers'),
+                                        child: const Text('Server 2'),
                                       ),
                                     ],
                                   );

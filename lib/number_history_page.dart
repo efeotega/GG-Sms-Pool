@@ -87,7 +87,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
 
       // Fetch the user's current balance
       final userDocRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+          FirebaseFirestore.instance.collection('ggsms_users').doc(user.email);
       final userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
@@ -112,7 +112,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     }
   }
 
-  Future<void> _updateStatusToVoid(String orderId) async {
+  Future<void> _updateStatusToVoid(String orderId, String amount) async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -122,8 +122,8 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
 
       // Get the document reference for the specific purchased number
       final docRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
+          .collection('ggsms_users')
+          .doc(user.email)
           .collection('purchased_numbers')
           .where('orderId', isEqualTo: orderId)
           .limit(1);
@@ -136,7 +136,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
 
         // Update the status field to "void"
         await purchasedNumberRef.update({'status': 99});
-
+        await refundBalance(amount);
         setState(() {});
       } else {
         print("OrderId not found in the database.");
@@ -146,25 +146,86 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     }
   }
 
-  void cancelSms(String orderId, String amount) async {
-    var request = http.MultipartRequest(
-        'POST', Uri.parse('https://api.smspool.net/sms/cancel'));
-    request.fields.addAll(
-        {'orderid': orderId, 'key': 'yFXHjau7PV6Dox8sA2YD8wD9Ak4kP5pC'});
+  Future<void> cancelSms(String orderId, String amount, String server) async {
+    if (server == "smspool") {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('https://api.smspool.net/sms/cancel'));
+      request.fields.addAll(
+          {'orderid': orderId, 'key': 'yFXHjau7PV6Dox8sA2YD8wD9Ak4kP5pC'});
 
-    http.StreamedResponse response = await request.send();
+      http.StreamedResponse response = await request.send();
 
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Cancelled Successfully'),
-        backgroundColor: Colors.green,
-      ));
-    } else {
-      // ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      //   content: Text('Unable to cancel'),
-      //   backgroundColor: Colors.red,
-      // ));
-      print(response.reasonPhrase);
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Cancelled Successfully'),
+          backgroundColor: Colors.green,
+        ));
+        await _updateStatusToVoid(orderId, amount);
+      } else {
+        print(response.reasonPhrase);
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Failed to cancel request.'),
+              backgroundColor: Colors.red,
+            ));
+      }
+    } else if (server == "smsbus") {
+      final token = "c5027c1a4b3c4dbe96442be795c8d5b3";
+      // Prepare the URL for the GET request
+      final url = Uri.parse(
+          'https://sms-bus.com/api/control/cancel?token=$token&request_id=$orderId');
+
+      try {
+        final response = await http.get(url);
+
+        if (response.statusCode == 200) {
+          // Convert the response body to a string
+          String responseBody = response.body;
+          print("Response: $responseBody");
+
+          // Parse the response body as JSON
+          final jsonResponse = jsonDecode(responseBody);
+
+          // Check if the response indicates success
+          if (jsonResponse['code'] == 200) {
+            print("Request successfully canceled.");
+
+            // You can show a dialog or message indicating success
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Request canceled successfully.'),
+              backgroundColor: Colors.green,
+            ));
+            await _updateStatusToVoid(orderId, amount);
+          } else {
+            // Handle failure
+
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Failed to cancel request.'),
+              backgroundColor: Colors.red,
+            ));
+          }
+        } else {
+          // Handle error response
+          String responseBody = await response.body;
+          print("Error response: $responseBody");
+
+          final jsonResponse = jsonDecode(responseBody);
+          if (jsonResponse.containsKey('message')) {
+            String message = jsonResponse['message'];
+            print("Error message: $message");
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Failed to cancel the request.'),
+            backgroundColor: Colors.red,
+          ));
+        }
+      } catch (e) {
+        print("Error: $e");
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('An error occurred while canceling the request.'),
+          backgroundColor: Colors.red,
+        ));
+      }
     }
   }
 
@@ -180,8 +241,8 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
             )
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user!.uid)
+                  .collection('ggsms_users')
+                  .doc(user!.email)
                   .collection('purchased_numbers')
                   .orderBy('date', descending: true)
                   .snapshots(),
@@ -438,10 +499,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                         child: TextButton(
                                           onPressed: () async {
                                             if (hasFiveMinutesElapsed(date)) {
-                                              cancelSms(orderId, price);
-                                              await _updateStatusToVoid(
-                                                  orderId);
-                                              await refundBalance(price);
+                                              cancelSms(orderId, price, server);
                                             } else {
                                               ScaffoldMessenger.of(context)
                                                   .showSnackBar(const SnackBar(
@@ -488,46 +546,72 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     );
   }
 
+  Future<String> getSmsBusCode(String requestId) async {
+    // Assuming you have a valid token
+    final token = "c5027c1a4b3c4dbe96442be795c8d5b3"; // Replace with your token
+
+    // Prepare the URL for the GET request
+    final url = Uri.parse(
+        'https://sms-bus.com/api/control/get/sms?token=$token&request_id=$requestId');
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        // Convert the response body to a string
+        String responseBody = response.body;
+        print("Response: $responseBody");
+
+        // Parse the response body as JSON
+        final jsonResponse = jsonDecode(responseBody);
+
+        // Check if the "data" field exists
+        if (jsonResponse['code'] == 200 && jsonResponse['data'] != null) {
+          String smsCode = jsonResponse['data'];
+          print("SMS Code: $smsCode");
+
+          return smsCode;
+        } else {
+          print("Error fetching SMS code: ${jsonResponse['message']}");
+          return "Error";
+        }
+      } else {
+        // Handle error response
+        String responseBody = await response.body;
+        print("Error response: $responseBody");
+
+        final jsonResponse = jsonDecode(responseBody);
+        if (jsonResponse.containsKey('message')) {
+          String message = jsonResponse['message'];
+          int code = jsonResponse['code'];
+          if (code == 50101) {
+            return "SMS pending";
+          }
+          print("Error message: $message");
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to fetch SMS code.'),
+          backgroundColor: Colors.red,
+        ));
+        return "Error";
+      }
+    } catch (e) {
+      print("Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('An error occurred while fetching the SMS code.'),
+        backgroundColor: Colors.red,
+      ));
+      return "Error";
+    }
+  }
+
   /// Fetch the SMS code from the API and save it to Firestore
   Future<String?> _fetchAndSaveSmsCode(String server, String orderId,
       DocumentReference docRef, int status) async {
-    if (server == "daisysms") {
-      var url = 'https://api.allorigins.win/get?url=${Uri.encodeComponent(
-              'https://daisysms.com/stubs/handler_api.php?api_key=$apiKey&action=getStatus&id=$orderId')}';
-      try {
-        final response = await http.get(Uri.parse(url));
-
-        if (response.statusCode == 200) {
-          final responseBody = response.body.trim();
-          print(responseBody);
-          if (responseBody.startsWith('STATUS_OK')) {
-            return responseBody.split(':')[1]; // Return SMS Code
-          } else if (responseBody == 'NO_ACTIVATION') {
-            return 'Wrong ID';
-          } else if (responseBody == 'STATUS_WAIT_CODE') {
-            print("waiting");
-            return 'Waiting for SMS';
-          } else if (responseBody == 'STATUS_CANCEL') {
-            print("cancelled");
-            return 'Rental cancelled';
-          } else {
-            if (responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "") == "STATUS_WAIT_CODE") {
-              return 'Waiting for SMS';
-            } else if (responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "") == 'NO_ACTIVATION') {
-              return 'Wrong ID';
-            } else if (responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "") == 'STATUS_CANCEL') {
-              return 'Rental cancelled';
-            }
-            else{
-              return responseBody.split(':')[1].replaceAll('"', "").replaceAll(",status", "");
-            }
-          }
-        } else {
-          return 'Failed to fetch data. Status Code: ${response.statusCode}';
-        }
-      } catch (e) {
-        return 'Error: $e';
-      }
+    if (server == "smsbus") {
+      String sms = await getSmsBusCode(orderId);
+      return sms;
     } else if (server == "smspool") {
       try {
         var request = http.MultipartRequest(

@@ -13,13 +13,13 @@ class _ReceiptReviewPageState extends State<ReceiptReviewPage> {
 
   // Fetches all receipts from Firestore
   Stream<QuerySnapshot> _fetchReceipts() {
-    return FirebaseFirestore.instance.collection('receipts').snapshots();
+    return FirebaseFirestore.instance.collection('ggsms_receipts').snapshots();
   }
 
   // Fetch user details based on their email
   Future<Map<String, dynamic>?> _fetchUserDetails(String userEmail) async {
     final userSnapshot = await FirebaseFirestore.instance
-        .collection('users')
+        .collection('ggsms_users')
         .where('email', isEqualTo: userEmail)
         .limit(1)
         .get();
@@ -32,7 +32,7 @@ class _ReceiptReviewPageState extends State<ReceiptReviewPage> {
 
   // Handle accepting the payment by updating user's balance
   Future<void> _acceptPayment(String userEmail, double amount,String receiptId) async {
-  final usersRef = FirebaseFirestore.instance.collection('users');
+  final usersRef = FirebaseFirestore.instance.collection('ggsms_users');
   final querySnapshot = await usersRef.where('email', isEqualTo: userEmail).get();
 
   if (querySnapshot.docs.isEmpty) {
@@ -59,7 +59,7 @@ class _ReceiptReviewPageState extends State<ReceiptReviewPage> {
     transaction.update(userRef, {'balance': currentBalance + amount});
 
     // Record the payment in the paymentHistory subcollection
-    final historyRef = userRef.collection('payment_history').doc();
+    final historyRef = userRef.collection('ggsms_payment_history').doc();
     transaction.set(historyRef, {
       'amount': amount,
       'date': FieldValue.serverTimestamp(),
@@ -67,7 +67,7 @@ class _ReceiptReviewPageState extends State<ReceiptReviewPage> {
     });
   });
    FirebaseFirestore.instance
-                                      .collection('receipts')
+                                      .collection('ggsms_receipts')
                                       .doc(receiptId)
                                       .delete();
 
@@ -188,7 +188,7 @@ class _ReceiptReviewPageState extends State<ReceiptReviewPage> {
                               ElevatedButton(
                                 onPressed: () {
                                   FirebaseFirestore.instance
-                                      .collection('receipts')
+                                      .collection('ggsms_receipts')
                                       .doc(receipt.id)
                                       .delete();
                                   ScaffoldMessenger.of(context).showSnackBar(

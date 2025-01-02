@@ -66,7 +66,7 @@ void _copyToClipboard(BuildContext context, String text) {
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('receipts')
-          .child('${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          .child('${user.email}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
       String imageUrl;
 
@@ -81,7 +81,7 @@ void _copyToClipboard(BuildContext context, String text) {
       imageUrl = await storageRef.getDownloadURL();
 
       // Save receipt URL and email to Firestore
-      await FirebaseFirestore.instance.collection('receipts').add({
+      await FirebaseFirestore.instance.collection('ggsms_receipts').add({
         'imageUrl': imageUrl,
         'userEmail': user.email,
       });

@@ -33,8 +33,8 @@ class _FundAccountPageState extends State<FundAccountPage> {
     if (currentUser == null) return;
 
     final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
-    final paymentHistory = userDoc.collection('payment_history');
+        FirebaseFirestore.instance.collection('ggsms_users').doc(currentUser!.email);
+    final paymentHistory = userDoc.collection('ggsms_payment_history');
 
     await paymentHistory.add({
       'amount': amount,
@@ -47,7 +47,7 @@ class _FundAccountPageState extends State<FundAccountPage> {
     if (currentUser == null) return;
 
     final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
+        FirebaseFirestore.instance.collection('ggsms_users').doc(currentUser!.email);
     final userSnapshot = await userDoc.get();
 
     if (userSnapshot.exists) {
