@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,6 +35,7 @@ class _HomePageState extends State<HomePage> {
     _loadUserData();
     calculateTotalDeposited();
     checkIfUserBanned();
+    listenToUserBalance(FirebaseAuth.instance.currentUser!.email!);
   }
 
   Future<void> checkIfUserBanned() async {
@@ -145,6 +148,51 @@ class _HomePageState extends State<HomePage> {
         calculateTotalDeposited();
       }
     }
+  }
+
+  StreamSubscription<DocumentSnapshot>? _balanceSubscription;
+
+  void listenToUserBalance(String userEmail) {
+    // Reference to the user's document in Firestore
+    final userDocRef =
+        FirebaseFirestore.instance.collection('ggsms_users').doc(userEmail);
+
+    // Cancel existing listener if any
+    _balanceSubscription?.cancel();
+
+    // Start listening for changes in the user's document
+    _balanceSubscription = userDocRef.snapshots().listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>?;
+
+        if (data != null && data.containsKey('balance')) {
+          final balance = data['balance'];
+          print('User balance updated: $balance');
+
+          // You can also update the state to reflect the balance in the UI
+          setState(() {
+            this.balance = balance.toString();
+          });
+        } else {
+          print('Balance field does not exist in user document');
+        }
+      } else {
+        print('User document does not exist');
+      }
+    }, onError: (error) {
+      print('Error listening to balance: $error');
+    });
+  }
+
+  @override
+  void dispose() {
+    stopListeningToUserBalance();
+    super.dispose();
+  }
+
+  void stopListeningToUserBalance() {
+    _balanceSubscription?.cancel();
+    _balanceSubscription = null;
   }
 
   void _showVerificationDialog() {

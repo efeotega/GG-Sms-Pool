@@ -162,11 +162,19 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         ));
         await _updateStatusToVoid(orderId, amount);
       } else {
-        print(response.reasonPhrase);
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Failed to cancel request.'),
-              backgroundColor: Colors.red,
-            ));
+        print(response.statusCode);
+        if(response.reasonPhrase==""&&response.statusCode==404){
+          await _updateStatusToVoid(orderId, amount);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Cancelled Successfully'),
+          backgroundColor: Colors.green,
+        ));
+        return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to cancel request.'),
+          backgroundColor: Colors.red,
+        ));
       }
     } else if (server == "smsbus") {
       final token = "c5027c1a4b3c4dbe96442be795c8d5b3";
@@ -287,258 +295,271 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                     if (status == 3) {
                       backgroundColor = Colors.green;
                     }
+                    if (server == "smspool" && status == 99) {
+                      return SizedBox.shrink();
+                    } else {
+                      return FutureBuilder<String?>(
+                        future: smsCode.isEmpty
+                            ? _fetchAndSaveSmsCode(server, orderId,
+                                purchasedNumbers[index].reference, status)
+                            : Future.value(
+                                smsCode), // Use cached SMS if available
+                        builder: (context, smsSnapshot) {
+                          if (smsSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: ListTile(
+                                leading: CircularProgressIndicator(),
+                                title: Text("Fetching SMS..."),
+                              ),
+                            );
+                          }
 
-                    return FutureBuilder<String?>(
-                      future: smsCode.isEmpty
-                          ? _fetchAndSaveSmsCode(server, orderId,
-                              purchasedNumbers[index].reference, status)
-                          : Future.value(
-                              smsCode), // Use cached SMS if available
-                      builder: (context, smsSnapshot) {
-                        if (smsSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.all(10),
-                            child: ListTile(
-                              leading: CircularProgressIndicator(),
-                              title: Text("Fetching SMS..."),
+                          final sms = smsSnapshot.data ?? 'No SMS available';
+                          final statusMessage = _getStatusMessage(status);
+
+                          return Card(
+                            elevation: 4,
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        }
-
-                        final sms = smsSnapshot.data ?? 'No SMS available';
-                        final statusMessage = _getStatusMessage(status);
-
-                        return Card(
-                          elevation: 4,
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Number and Service Row
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  "+$number",
-                                                  style: const TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.copy),
-                                                onPressed: () =>
-                                                    _copyToClipboard(
-                                                        context, number),
-                                                tooltip: "Copy Number",
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Service: $service",
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-
-                                // SMS Code and Status Row
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Row(
-                                        children: [
-                                          status == 99
-                                              ? const Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Number and Service Row
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
                                                   child: Text(
-                                                    "SMS Code: cancelled",
-                                                    style:
-                                                        TextStyle(fontSize: 16),
-                                                  ),
-                                                )
-                                              : Expanded(
-                                                  child: StreamBuilder<String>(
-                                                    stream: _getCodeStream(
-                                                        server: server,
-                                                        orderId: orderId,
-                                                        status: status,
-                                                        purchasedNumbers:
-                                                            purchasedNumbers,
-                                                        index: index),
-                                                    builder:
-                                                        (context, snapshot) {
-                                                      if (snapshot.hasData) {
-                                                        return Text(
-                                                          "Sms code: ${snapshot.data!}",
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 16),
-                                                        );
-                                                      } else if (snapshot
-                                                          .hasError) {
-                                                        return Text(
-                                                          'Error: ${snapshot.error}',
-                                                          style:
-                                                              const TextStyle(
-                                                                  color: Colors
-                                                                      .red),
-                                                        );
-                                                      }
-                                                      return const Center(
-                                                          child:
-                                                              CircularProgressIndicator());
-                                                    },
+                                                    "+$number",
+                                                    style: const TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.bold),
                                                   ),
                                                 ),
-                                          IconButton(
-                                            icon: const Icon(Icons.copy),
-                                            onPressed: () =>
-                                                _copyToClipboard(context, sms),
-                                            tooltip: "Copy SMS Code",
-                                          ),
-                                          // Refresh Icon
-                                          if (status !=
-                                              3) // Show refresh icon only if status is not complete
+                                                IconButton(
+                                                  icon: const Icon(Icons.copy),
+                                                  onPressed: () =>
+                                                      _copyToClipboard(
+                                                          context, number),
+                                                  tooltip: "Copy Number",
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "$service",
+                                              style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // SMS Code and Status Row
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            status == 99
+                                                ? const Expanded(
+                                                    child: Text(
+                                                      "SMS Code: cancelled",
+                                                      style: TextStyle(
+                                                          fontSize: 16),
+                                                    ),
+                                                  )
+                                                : Expanded(
+                                                    child:
+                                                        StreamBuilder<String>(
+                                                      stream: _getCodeStream(
+                                                          server: server,
+                                                          orderId: orderId,
+                                                          status: status,
+                                                          purchasedNumbers:
+                                                              purchasedNumbers,
+                                                          index: index),
+                                                      builder:
+                                                          (context, snapshot) {
+                                                        if (snapshot.hasData) {
+                                                          return Text(
+                                                            "Sms code: ${snapshot.data!}",
+                                                            style:
+                                                                const TextStyle(
+                                                                    fontSize:
+                                                                        16),
+                                                          );
+                                                        } else if (snapshot
+                                                            .hasError) {
+                                                          return Text(
+                                                            'Error: ${snapshot.error}',
+                                                            style:
+                                                                const TextStyle(
+                                                                    color: Colors
+                                                                        .red),
+                                                          );
+                                                        }
+                                                        return const Center(
+                                                            child:
+                                                                CircularProgressIndicator());
+                                                      },
+                                                    ),
+                                                  ),
                                             IconButton(
-                                              icon: const Icon(Icons.refresh),
-                                              onPressed: () async {
-                                                // Show a loading indicator during refresh
+                                              icon: const Icon(Icons.copy),
+                                              onPressed: () => _copyToClipboard(
+                                                  context, sms),
+                                              tooltip: "Copy SMS Code",
+                                            ),
+                                            // Refresh Icon
+                                            if (status !=
+                                                3) // Show refresh icon only if status is not complete
+                                              IconButton(
+                                                icon: const Icon(Icons.refresh),
+                                                onPressed: () async {
+                                                  // Show a loading indicator during refresh
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                          "Refreshing SMS status..."),
+                                                      duration:
+                                                          Duration(seconds: 2),
+                                                    ),
+                                                  );
+
+                                                  // Call API to fetch the latest SMS code
+                                                  final updatedSms =
+                                                      await _fetchAndSaveSmsCode(
+                                                    server,
+                                                    orderId,
+                                                    purchasedNumbers[index]
+                                                        .reference,
+                                                    status,
+                                                  );
+
+                                                  // Update UI after fetching SMS
+                                                  setState(() {
+                                                    final data =
+                                                        purchasedNumbers[index]
+                                                                .data()
+                                                            as Map<String,
+                                                                dynamic>?;
+                                                    if (data != null &&
+                                                        updatedSms != null) {
+                                                      data['sms'] =
+                                                          updatedSms; // Safely update the 'sms' value
+                                                    }
+                                                  });
+                                                },
+                                                tooltip: "Refresh SMS Code",
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Chip(
+                                        label: Text(
+                                          statusMessage,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        backgroundColor: backgroundColor,
+                                      ),
+                                    ],
+                                  ),
+
+                                  const Divider(),
+
+                                  // Countdown Timer
+                                  CountdownTimerWidget(
+                                    startTime: date,
+                                    minutes: server == "daisysms" ? 7 : 20,
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // Purchase Date and Cancel Button
+                                  Text(
+                                    "Purchased on: $date",
+                                  ),
+                                  Text("Price ₦$price"),
+                                  const SizedBox(height: 8),
+
+                                  status != 3 && status != 99
+                                      ? Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: () async {
+                                              if (hasFiveMinutesElapsed(date)) {
+                                                cancelSms(
+                                                    orderId, price, server);
+                                              } else {
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                        "Refreshing SMS status..."),
-                                                    duration:
-                                                        Duration(seconds: 2),
-                                                  ),
-                                                );
-
-                                                // Call API to fetch the latest SMS code
-                                                final updatedSms =
-                                                    await _fetchAndSaveSmsCode(
-                                                  server,
-                                                  orderId,
-                                                  purchasedNumbers[index]
-                                                      .reference,
-                                                  status,
-                                                );
-
-                                                // Update UI after fetching SMS
-                                                setState(() {
-                                                  final data = purchasedNumbers[
-                                                              index]
-                                                          .data()
-                                                      as Map<String, dynamic>?;
-                                                  if (data != null &&
-                                                      updatedSms != null) {
-                                                    data['sms'] =
-                                                        updatedSms; // Safely update the 'sms' value
-                                                  }
-                                                });
-                                              },
-                                              tooltip: "Refresh SMS Code",
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Chip(
-                                      label: Text(
-                                        statusMessage,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      backgroundColor: backgroundColor,
-                                    ),
-                                  ],
-                                ),
-
-                                const Divider(),
-
-                                // Countdown Timer
-                                CountdownTimerWidget(
-                                  startTime: date,
-                                  minutes: server == "daisysms" ? 7 : 20,
-                                ),
-                                const SizedBox(height: 8),
-
-                                // Purchase Date and Cancel Button
-                                Text(
-                                  "Purchased on: $date",
-                                ),
-                                Text("Price ₦$price"),
-                                const SizedBox(height: 8),
-
-                                status != 3 && status != 99
-                                    ? Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton(
-                                          onPressed: () async {
-                                            if (hasFiveMinutesElapsed(date)) {
-                                              cancelSms(orderId, price, server);
-                                            } else {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    "Please wait five minutes to elapse before cancelling your order"),
-                                                backgroundColor: Colors.red,
-                                              ));
-                                            }
-                                          },
-                                          child: const Text(
-                                            "Cancel",
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                      )
-                                    : Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton(
-                                          onPressed: () {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
+                                                        const SnackBar(
                                                   content: Text(
-                                                      "Order already processed")),
-                                            );
-                                          },
-                                          child: const Text(
-                                            "Cancel",
-                                            style:
-                                                TextStyle(color: Colors.grey),
+                                                      "Please wait five minutes to elapse before cancelling your order"),
+                                                  backgroundColor: Colors.red,
+                                                ));
+                                              }
+                                            },
+                                            child: const Text(
+                                              "Cancel",
+                                              style:
+                                                  TextStyle(color: Colors.red),
+                                            ),
+                                          ),
+                                        )
+                                      : Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: () {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                    content: Text(
+                                                        "Order already processed")),
+                                              );
+                                            },
+                                            child: const Text(
+                                              "Cancel",
+                                              style:
+                                                  TextStyle(color: Colors.grey),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
+                          );
+                        },
+                      );
+                    }
                   },
                 );
               },

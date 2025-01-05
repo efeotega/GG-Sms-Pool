@@ -135,28 +135,6 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
 }
 
 
-  // // Price data based on country and service
-  // final Map<String, Map<String, int>> priceData = {
-  //   'United States': {
-  //     'WhatsApp': 2500,
-  //     'Telegram': 3500,
-  //     'Signal': 1800,
-  //     'OkCupid': 2000,
-  //     'Google/Gmail': 2000,
-  //     'Apple': 1500,
-  //     'default': 1500,
-  //   },
-  //   'United Kingdom': {
-  //     'WhatsApp': 3000,
-  //     'Telegram': 3000,
-  //     'Signal': 1500,
-  //     'Google/Gmail': 2300,
-  //     'Apple': 2000,
-  //     'OkCupid': 1900,
-  //     'default': 2000,
-  //   },
-  // };
-
   @override
   void initState() {
     super.initState();
@@ -191,7 +169,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
       // Fetch the price based on country and service, default to 1500 if not found
       final int price = priceData[country]?[service] ??
           priceData[country]?['default'] ??
-          1500;
+          1900;
 
       // Check if user has enough balance
       if (currentBalance < price) {
