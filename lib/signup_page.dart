@@ -49,7 +49,7 @@ class _SignUpPageState extends State<SignUpPage> {
     await FirebaseFirestore.instance.collection('ggsms_users').doc(email).set({
       'firstName': _firstNameController.text.trim(),
       'lastName': _lastNameController.text.trim(),
-      'email': _emailController.text.trim(),
+      'email': _emailController.text.trim().toLowerCase(),
       'createdAt': Timestamp.now(),
       'balance':0.00,
       'numbers':[0],
