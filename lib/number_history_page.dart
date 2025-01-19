@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gg_sms_pool/countdown_timer_widget.dart';
+import 'package:gg_sms_pool/daisy_sms_proxy.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -163,13 +164,13 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         await _updateStatusToVoid(orderId, amount);
       } else {
         print(response.statusCode);
-        if(response.reasonPhrase==""&&response.statusCode==404){
+        if (response.reasonPhrase == "" && response.statusCode == 404) {
           await _updateStatusToVoid(orderId, amount);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Cancelled Successfully'),
-          backgroundColor: Colors.green,
-        ));
-        return;
+            content: Text('Cancelled Successfully'),
+            backgroundColor: Colors.green,
+          ));
+          return;
         }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Failed to cancel request.'),
@@ -177,7 +178,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         ));
       }
     } else if (server == "smsbus") {
-      final token = "c5027c1a4b3c4dbe96442be795c8d5b3";
+      const token = "c5027c1a4b3c4dbe96442be795c8d5b3";
       // Prepare the URL for the GET request
       final url = Uri.parse(
           'https://sms-bus.com/api/control/cancel?token=$token&request_id=$orderId');
@@ -213,7 +214,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
           }
         } else {
           // Handle error response
-          String responseBody = await response.body;
+          String responseBody = response.body;
           print("Error response: $responseBody");
 
           final jsonResponse = jsonDecode(responseBody);
@@ -231,6 +232,27 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         print("Error: $e");
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('An error occurred while canceling the request.'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } else if (server == "daisysms") {
+      final proxy = DaisySMSProxy('https://daisy-proxy.onrender.com');
+      final result = await proxy.setStatus(
+          apiKey: "X8PiPQWlxSKYSNcOOWBwYOaze6hgkZ", id: orderId, status: 8);
+      print(result);
+      if (result == "ACCESS_CANCEL") {
+        print("Request successfully canceled.");
+
+        // You can show a dialog or message indicating success
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Request canceled successfully.'),
+          backgroundColor: Colors.green,
+        ));
+        await _updateStatusToVoid(orderId, amount);
+      }
+      if (result == "ACCESS_READY") {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to cancel the request.'),
           backgroundColor: Colors.red,
         ));
       }
@@ -295,8 +317,8 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                     if (status == 3) {
                       backgroundColor = Colors.green;
                     }
-                    if (server == "smspool" && status == 99) {
-                      return SizedBox.shrink();
+                    if (status == 99) {
+                      return const SizedBox.shrink();
                     } else {
                       return FutureBuilder<String?>(
                         future: smsCode.isEmpty
@@ -366,8 +388,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                               "$service",
                                               style: const TextStyle(
                                                   fontSize: 16,
-                                                  fontWeight: FontWeight.bold
-                                              ),
+                                                  fontWeight: FontWeight.bold),
                                             ),
                                           ],
                                         ),
@@ -516,6 +537,26 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                           child: TextButton(
                                             onPressed: () async {
                                               if (hasFiveMinutesElapsed(date)) {
+                                                try {
+                                                  String result =
+                                                      await generateCode(
+                                                    server: server,
+                                                    orderId: orderId,
+                                                    status: status,
+                                                    purchasedNumbers:
+                                                        purchasedNumbers,
+                                                    index: index,
+                                                  );
+
+                                                  if (result.toLowerCase() ==
+                                                      "order refunded") {
+                                                    cancelSms(
+                                                        orderId, price, server);
+                                                    return;
+                                                  }
+                                                } catch (e) {
+                                                  //
+                                                }
                                                 cancelSms(
                                                     orderId, price, server);
                                               } else {
@@ -569,7 +610,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
 
   Future<String> getSmsBusCode(String requestId) async {
     // Assuming you have a valid token
-    final token = "c5027c1a4b3c4dbe96442be795c8d5b3"; // Replace with your token
+    const token = "c5027c1a4b3c4dbe96442be795c8d5b3"; // Replace with your token
 
     // Prepare the URL for the GET request
     final url = Uri.parse(
@@ -598,7 +639,7 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         }
       } else {
         // Handle error response
-        String responseBody = await response.body;
+        String responseBody = response.body;
         print("Error response: $responseBody");
 
         final jsonResponse = jsonDecode(responseBody);
@@ -627,11 +668,22 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     }
   }
 
+  Future<String> getDaisySms(String orderId) async {
+    final proxy = DaisySMSProxy('https://daisy-proxy.onrender.com');
+    final result = await proxy.getCode(
+        apiKey: "X8PiPQWlxSKYSNcOOWBwYOaze6hgkZ", id: orderId);
+    return result;
+  }
+
   /// Fetch the SMS code from the API and save it to Firestore
   Future<String?> _fetchAndSaveSmsCode(String server, String orderId,
       DocumentReference docRef, int status) async {
     if (server == "smsbus") {
       String sms = await getSmsBusCode(orderId);
+      return sms;
+    }
+    if (server == "daisysms") {
+      String sms = await getDaisySms(orderId);
       return sms;
     } else if (server == "smspool") {
       try {

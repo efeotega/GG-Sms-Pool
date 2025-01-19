@@ -166,13 +166,16 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
       // Get the user's current balance
       final int currentBalance = userDoc.data()?['balance'] ?? 0;
 
-      // Fetch the price based on country and service, default to 1500 if not found
+      // Fetch the price based on country and service, default to 1900 if not found
       final int price = priceData[country]?[service] ??
           priceData[country]?['default'] ??
           1900;
 
       // Check if user has enough balance
       if (currentBalance < price) {
+        setState(() {
+          isLoading=false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
               "Insufficient balance. Current balance: $currentBalance, Required: $price"),
@@ -216,10 +219,10 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
       // Get the user's current balance
       final int currentBalance = userDoc.data()?['balance'] ?? 0;
 
-      // Fetch the price based on country and service, default to 1500 if not found
+      // Fetch the price based on country and service, default to 1900 if not found
       final int price = priceData[country]?[service] ??
           priceData[country]?['default'] ??
-          1500;
+          1900;
 
       // Calculate the new balance
       final int newBalance = currentBalance + price;
@@ -405,6 +408,13 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
             });
             await refundBalance(selectedCountry!, selectedService!);
             // If the number field is not found
+            if(responseBody.contains("This service is currently not available")){
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('This service is currently not available.'),
+              backgroundColor: Colors.red,
+            ));
+            return;
+            }
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Failed to retrieve the purchased number.'),
               backgroundColor: Colors.red,

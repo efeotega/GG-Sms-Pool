@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:gg_sms_pool/buy_numbers_smsbus_page.dart';
+import 'package:gg_sms_pool/us_numbers_page.dart';
 import 'package:gg_sms_pool/buy_numbers_smspool_page.dart';
 import 'package:gg_sms_pool/landing_page.dart';
 import 'package:gg_sms_pool/login_page.dart';
@@ -163,7 +163,7 @@ class _HomePageState extends State<HomePage> {
     // Start listening for changes in the user's document
     _balanceSubscription = userDocRef.snapshots().listen((snapshot) {
       if (snapshot.exists) {
-        final data = snapshot.data() as Map<String, dynamic>?;
+        final data = snapshot.data();
 
         if (data != null && data.containsKey('balance')) {
           final balance = data['balance'];
@@ -280,8 +280,13 @@ class _HomePageState extends State<HomePage> {
                         TextButton(
                           onPressed: () {
                             Navigator.pop(context); // Close the dialog
-                            moveToPage(context, const BuyNumbersPageSmsBus(),
-                                false); // Navigate to Other Numbers
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content:
+                                  Text("Server 2 currently under maintenance"),
+                              backgroundColor: Colors.red,
+                            ));
+                            // moveToPage(context, const BuyNumbersPageSmsBus(),
+                            //     false); // Navigate to Other Numbers
                           },
                           child: const Text('Server 2'),
                         ),
@@ -402,6 +407,18 @@ class _HomePageState extends State<HomePage> {
                                     title: const Text('Select Server'),
                                     //content: const Text('Choose the type of numbers you want to buy:'),
                                     actions: [
+                                       TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(
+                                              context); // Close the dialog
+                                          
+                                          moveToPage(
+                                              context,
+                                              const USNumbersPage(),
+                                              false); // Navigate to Other Numbers
+                                        },
+                                        child: const Text('US Numbers'),
+                                      ),
                                       TextButton(
                                         onPressed: () {
                                           Navigator.pop(
@@ -411,19 +428,25 @@ class _HomePageState extends State<HomePage> {
                                               const BuyNumbersPageSmsPool(),
                                               false); // Navigate to US Numbers
                                         },
-                                        child: const Text('Server 1'),
+                                        child: const Text('Other Numbers'),
                                       ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(
-                                              context); // Close the dialog
-                                          moveToPage(
-                                              context,
-                                              const BuyNumbersPageSmsBus(),
-                                              false); // Navigate to Other Numbers
-                                        },
-                                        child: const Text('Server 2'),
-                                      ),
+                                      // TextButton(
+                                      //   onPressed: () {
+                                      //     // Close the dialog
+                                      //     ScaffoldMessenger.of(context)
+                                      //         .showSnackBar(const SnackBar(
+                                      //       content: Text(
+                                      //           "Server 2 currently under maintenance"),
+                                      //       backgroundColor: Colors.red,
+                                      //     ));
+                                      //     // moveToPage(
+                                      //     //     context,
+                                      //     //     const BuyNumbersPageSmsBus(),
+                                      //     //     false); // Navigate to Other Numbers
+                                      //   },
+                                      //   child: const Text('Server 2'),
+                                      // ),
+                                     
                                     ],
                                   );
                                 },

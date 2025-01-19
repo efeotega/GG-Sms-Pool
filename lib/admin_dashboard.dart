@@ -55,6 +55,13 @@ class AdminTasksPage extends StatelessWidget {
               moveToPage(context, const PricingAdjustmentPageSmsBus(), false);
             },
           ),
+           TaskItem(
+            title: 'Adjust Number Pricing (Daisy Sms)',
+            onTap: () {
+              // Navigate to reports page
+              moveToPage(context, const PricingAdjustmentPageSmsBus(), false);
+            },
+          ),
           
         ],
       ),
