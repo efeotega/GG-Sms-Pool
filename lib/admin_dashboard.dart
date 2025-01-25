@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gg_sms_pool/adjust_pricing_daisysms.dart';
 import 'package:gg_sms_pool/adjust_pricing_smsbus.dart';
 import 'package:gg_sms_pool/adjust_pricing_smspool.dart';
 import 'package:gg_sms_pool/finance_history_page.dart';
@@ -59,7 +60,7 @@ class AdminTasksPage extends StatelessWidget {
             title: 'Adjust Number Pricing (Daisy Sms)',
             onTap: () {
               // Navigate to reports page
-              moveToPage(context, const PricingAdjustmentPageSmsBus(), false);
+              moveToPage(context,  const PricingAdjustmentPageDaisySms(), false);
             },
           ),
           

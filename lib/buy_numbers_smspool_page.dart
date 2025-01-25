@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:gg_sms_pool/home_page.dart';
 import 'package:gg_sms_pool/number_history_page.dart';
 import 'package:gg_sms_pool/utils.dart';
 import 'package:http/http.dart' as http;
@@ -45,15 +46,15 @@ class _BuyNumbersPageSmsPoolState extends State<BuyNumbersPageSmsPool> {
           actions: [
             TextButton(
               onPressed: () {
-               moveToPage(context, const NumberHistoryPage(), false);// Close the dialog
+               moveToPage(context, const HomePage(), true);// Close the dialog
               },
-              child: const Text('View SMS Code'),
+              child: const Text('View Order'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
-              child: const Text('OK'),
+              child: const Text('Back'),
             ),
           ],
         );
@@ -345,6 +346,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
         'service': service,
         'server':"smspool",
         'orderId': orderId,
+        "status":1,
         'price':displayedPrice,
         'date': FieldValue.serverTimestamp(),
       });
@@ -356,104 +358,109 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
   }
 
   void _onProceed() async {
-    setState(() {
-      isLoading = true;
-    });
-    if (selectedCountry != null && selectedService != null) {
-      // Deduct displayedPrice variable from user balance if necessary before making the request
-      if (await deductBalance(selectedCountry!, selectedService!)) {
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('https://api.smspool.net/purchase/sms'),
-        );
+  if (isLoading) return;
 
-        request.fields.addAll({
-          'key': 'yFXHjau7PV6Dox8sA2YD8wD9Ak4kP5pC',
-          'country': selectedCountryId!.toString(),
-          'service': selectedService!,
-          'pool': '',
-          'max_price': '1.90',
-          'pricing_option': '0',
-          'quantity': '1',
-          'areacode': '',
-          'exclude': '',
-          'create_token': ''
-        });
+  setState(() {
+    isLoading = true;
+  });
 
-        http.StreamedResponse response = await request.send();
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Please wait..."),
+      backgroundColor: Colors.blue,
+    ),
+  );
 
-        if (response.statusCode == 200) {
-          setState(() {
-            isLoading=false;
-          });
-          // Convert response stream to a string
-          String responseBody = await response.stream.bytesToString();
-          print("Response: $responseBody");
-
-          // Parse the response body as JSON
-          final jsonResponse = jsonDecode(responseBody);
-
-          // Check if the "number" field exists
-          if (jsonResponse.containsKey('number')) {
-            int purchasedNum = jsonResponse['number'];
-            String purchasedNumber=purchasedNum.toString();
-            String orderId = jsonResponse['order_id'];
-            print("Purchased number: $purchasedNumber");
-            showNumberGottenDialog(context, purchasedNumber);
-            await savePurchasedNumber(
-                purchasedNumber, selectedService!, orderId);
-          } else {
-            setState(() {
-              isLoading = false;
-            });
-            await refundBalance(selectedCountry!, selectedService!);
-            // If the number field is not found
-            if(responseBody.contains("This service is currently not available")){
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('This service is currently not available.'),
-              backgroundColor: Colors.red,
-            ));
-            return;
-            }
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Failed to retrieve the purchased number.'),
-              backgroundColor: Colors.red,
-            ));
-          }
-        } else {
-          setState(() {
-      isLoading=true;
-    });
-          // Handle error response
-          if (response.statusCode.toString() == "422") {
-            setState(() {
-              isLoading=false;
-            });
-            showNumberOutOfStockDialog(context);
-          }
-          String responseBody = await response.stream.bytesToString();
-          print("Response: $responseBody");
-
-          // Parse the response body as JSON
-          final jsonResponse = jsonDecode(responseBody);
-          if (jsonResponse.containsKey('message')) {
-            String message = jsonResponse['message'];
-            print("error message:$message");
-          }
-          await refundBalance(selectedCountry!, selectedService!);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Failed to purchase number.'),
-            backgroundColor: Colors.red,
-          ));
-        }
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+  if (selectedCountry == null || selectedService == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
         content: Text('Please select both country and service'),
         backgroundColor: Colors.red,
-      ));
-    }
+      ),
+    );
+    setState(() {
+      isLoading = false;
+    });
+    return;
   }
+
+  if (await deductBalance(selectedCountry!, selectedService!)) {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://api.smspool.net/purchase/sms'),
+      );
+
+      request.fields.addAll({
+        'key': 'yFXHjau7PV6Dox8sA2YD8wD9Ak4kP5pC',
+        'country': selectedCountryId!.toString(),
+        'service': selectedService!,
+        'pool': '',
+        'max_price': '1.90',
+        'pricing_option': '0',
+        'quantity': '1',
+        'areacode': '',
+        'exclude': '',
+        'create_token': ''
+      });
+
+      http.StreamedResponse response = await request.send();
+
+      if (response.statusCode == 200) {
+        String responseBody = await response.stream.bytesToString();
+        final jsonResponse = jsonDecode(responseBody);
+
+        if (jsonResponse.containsKey('number')) {
+          String purchasedNumber = jsonResponse['number'].toString();
+          String orderId = jsonResponse['order_id'];
+          showNumberGottenDialog(context, purchasedNumber);
+          await savePurchasedNumber(purchasedNumber, selectedService!, orderId);
+        } else {
+          await refundBalance(selectedCountry!, selectedService!);
+          final errorMessage = responseBody.contains("This service is currently not available")
+              ? 'This service is currently not available.'
+              : 'Failed to retrieve the purchased number.';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+          );
+        }
+      } else {
+        if (response.statusCode == 422) {
+          showNumberOutOfStockDialog(context);
+        } else {
+          String responseBody = await response.stream.bytesToString();
+          final jsonResponse = jsonDecode(responseBody);
+          if (jsonResponse.containsKey('message')) {
+            print("Error message: ${jsonResponse['message']}");
+          }
+        }
+        await refundBalance(selectedCountry!, selectedService!);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to purchase number.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An unexpected error occurred.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  } else {
+    setState(() {
+      isLoading = false;
+    });
+  }
+}
 
   // Filter countries based on search query
   void _filterCountries(String query) {
@@ -610,6 +617,9 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
               ),
             const SizedBox(height: 16),
             // Proceed Button
+            isLoading?const CircularProgressIndicator(
+                      color: Colors.white,
+                    ):
             ElevatedButton(
               onPressed: _onProceed,
               style: ElevatedButton.styleFrom(
@@ -619,11 +629,7 @@ Map<String, int> _parsePriceMap(Map<String, dynamic> data) {
                     borderRadius: BorderRadius.circular(8)),
                 backgroundColor: Colors.blueAccent,
               ),
-              child: isLoading
-                  ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                  : const Text('Proceed', style: TextStyle(fontSize: 16)),
+              child: const Text('Proceed', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

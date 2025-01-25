@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gg_sms_pool/daisy_services.dart';
 import 'package:gg_sms_pool/daisy_sms_proxy.dart';
+import 'package:gg_sms_pool/home_page.dart';
 import 'package:gg_sms_pool/number_history_page.dart';
 import 'package:gg_sms_pool/utils.dart';
 
@@ -60,9 +61,10 @@ class _USNumbersPageState extends State<USNumbersPage> {
       await userRef.set({
         'number': number,
         'service': service,
-        'server':"daisysms",
+        'server': "daisysms",
         'orderId': orderId,
-        'price':displayedPrice,
+        "status": 1,
+        'price': displayedPrice,
         'date': FieldValue.serverTimestamp(),
       });
 
@@ -123,6 +125,9 @@ class _USNumbersPageState extends State<USNumbersPage> {
           // Convert dynamic map to a Map<String, int>, handling nested maps
           final priceMap = _parsePriceMap(servicePrices);
           priceData[countryName] = priceMap;
+        } else {
+          print(
+              "Skipping document with invalid country name or prices: ${doc.id}");
         }
       }
     } catch (e) {
@@ -240,149 +245,106 @@ class _USNumbersPageState extends State<USNumbersPage> {
     }
   }
 
-  Future<void> _buyService() async {
-    if (await deductBalance("United States", _selectedService)) {
-      setState(() {
-        isLoading = true;
-      });
-      if (_selectedCode.isEmpty) {
-        print("no code");
-        setState(() {
-          isLoading = false;
-        });
-        setState(() {
-          _response = 'No service selected!';
-        });
-        return;
-      }
-      print("starting");
-      try {
-        final proxy = DaisySMSProxy('https://daisy-proxy.onrender.com');
-        final result = await proxy.getNumber(
-          apiKey: 'X8PiPQWlxSKYSNcOOWBwYOaze6hgkZ',
-          action: 'getNumber',
-          service: _selectedCode,
-          maxPrice: 1.5,
-        );
+ Future<void> _buyService() async {
+  if (isLoading) return;
 
-        // if (result['statusCode'] == 200) {
-        //   print('Response Body: ${result['body']}');
-        // } else {
-        //   print('Error: Failed with status code: ${result['statusCode']}');
-        // }
-        if (result['statusCode'] == 200) {
-          final responseBody = result['body'].trim();
+  setState(() {
+    isLoading = true;
+  });
 
-          if (responseBody.startsWith('ACCESS_NUMBER')) {
-            final parts = responseBody.split(':');
-            if (parts.length >= 3) {
-              final String id = parts[1];
-              final String phoneNumber = parts[2];
-              await savePurchasedNumber(phoneNumber, _selectedService, id);
-              // Show phone number in dialog
-              if (context.mounted) {
-                setState(() {
-                  isLoading=false;
-                });
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Number Retrieved'),
-                      content: Text('Phone Number: +$phoneNumber'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => moveToPage(
-                              context, const NumberHistoryPage(), false),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              }
-            }
-          } else if (responseBody == 'MAX_PRICE_EXCEEDED') {
-            await refundBalance(_selectedService);
-            setState(() {
-              isLoading = false;
-              _response = 'Max price exceeded. Please adjust your price limit.';
-            });
-          } else if (responseBody == 'NO_NUMBERS') {
-            await refundBalance(_selectedService);
-            setState(() {
-              isLoading = false;
-              _response =
-                  'No numbers available at the moment. Try again later.';
-            });
-          } else if (responseBody == 'TOO_MANY_ACTIVE_RENTALS') {
-            await refundBalance(_selectedService);
-            setState(() {
-              isLoading = false;
-              _response =
-                  'Too many active rentals. Complete them before renting more.';
-            });
-          } else if (responseBody == 'NO_MONEY') {
-            await refundBalance(_selectedService);
-            setState(() {
-              isLoading = false;
-              //_response = 'Insufficient balance. Please top up your account.';
-            });
-          } else {
-            final parts = responseBody.split(':');
-            if (parts.length >= 3) {
-              print(result['body']);
-              final String id = parts[2];
-              print("id:$id");
-              final String phoneNumber = parts[3].replaceAll('","status"', "");
-              await savePurchasedNumber(phoneNumber, _selectedService, id);
-              // Show phone number in dialog
-              if (context.mounted) {
-                setState(() {
-                  isLoading=false;
-                });
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Number Retrieved'),
-                      content: Text('Phone Number: +$phoneNumber'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => moveToPage(
-                              context, const NumberHistoryPage(), false),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              }
-            }
-          }
-        } else {
-          await refundBalance(_selectedService);
-          setState(() {
-            isLoading = false;
-            _response = 'Error: ${result['statusCode']}';
-          });
+  try {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("Please wait..."),
+      backgroundColor: Colors.blue,
+    ));
+
+    // Deduct balance
+    final balanceDeducted = await deductBalance("United States", _selectedService);
+    if (!balanceDeducted) {
+      throw Exception("Failed to deduct balance.");
+    }
+
+    if (_selectedCode.isEmpty) {
+      throw Exception("No service selected!");
+    }
+
+    final proxy = DaisySMSProxy('https://daisy-proxy.onrender.com');
+    final result = await proxy.getNumber(
+      apiKey: 'X8PiPQWlxSKYSNcOOWBwYOaze6hgkZ',
+      action: 'getNumber',
+      service: _selectedCode,
+      maxPrice: 1.5,
+    );
+
+    if (result['statusCode'] != 200) {
+      await refundBalance(_selectedService);
+      throw Exception("Error: ${result['statusCode']}");
+    }
+
+    final responseBody = result['body'].trim();
+    if (responseBody.startsWith('ACCESS_NUMBER')) {
+      final parts = responseBody.split(':');
+      if (parts.length >= 3) {
+        final String id = parts[1];
+        final String phoneNumber = parts[2];
+        await savePurchasedNumber(phoneNumber, _selectedService, id);
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              title: const Text('Number Retrieved'),
+              content: Text('Phone Number: +$phoneNumber'),
+              actions: [
+                TextButton(
+                  onPressed: () => moveToPage(context, const HomePage(), true),
+                  child: const Text('Back'),
+                ),
+                TextButton(
+                  onPressed: () => moveToPage(context, const NumberHistoryPage(), true),
+                  child: const Text('View Order'),
+                ),
+              ],
+            ),
+          );
         }
-      } catch (e) {
-        await refundBalance(_selectedService);
-        setState(() {
-          isLoading = false;
-          _response = 'Error: $e';
-        });
-        print('Error: $e');
       }
     } else {
+      // Handle all response scenarios
+      switch (responseBody) {
+        case 'MAX_PRICE_EXCEEDED':
+          _response = 'Max price exceeded. Please adjust your price limit.';
+          break;
+        case 'NO_NUMBERS':
+          _response = 'No numbers available at the moment. Try again later.';
+          break;
+        case 'TOO_MANY_ACTIVE_RENTALS':
+          _response = 'Too many active rentals. Complete them before renting more.';
+          break;
+        case 'NO_MONEY':
+          _response = 'Insufficient balance. Please top up your account.';
+          break;
+        default:
+          _response = 'Unexpected response: $responseBody';
+      }
       await refundBalance(_selectedService);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Error"),
-        backgroundColor: Colors.red,
-      ));
+      throw Exception(_response);
     }
+  } catch (e) {
+    setState(() {
+      _response = e.toString();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(_response),
+      backgroundColor: Colors.red,
+    ));
+    print('Error: $e');
+  } finally {
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   Future<bool> refundBalance(String service) async {
     try {
@@ -484,21 +446,22 @@ class _USNumbersPageState extends State<USNumbersPage> {
           const SizedBox(height: 16),
           Visibility(
             visible: selectedService != "",
-            child: ElevatedButton(
-              onPressed: _buyService,
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                backgroundColor: Colors.blueAccent,
-              ),
-              child: isLoading
-                  ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                  : const Text('Proceed', style: TextStyle(fontSize: 16)),
-            ),
+            child: isLoading
+                ? const CircularProgressIndicator(
+                    color: Colors.white,
+                  )
+                : ElevatedButton(
+                    onPressed: _buyService,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      backgroundColor: Colors.blueAccent,
+                    ),
+                    child:
+                        const Text('Proceed', style: TextStyle(fontSize: 16)),
+                  ),
           ),
         ],
       ),

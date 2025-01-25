@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:gg_sms_pool/home_page.dart';
 import 'package:gg_sms_pool/login_page.dart';
 import 'package:gg_sms_pool/utils.dart';
-import 'dart:html' as html;
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -13,58 +12,147 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _buildAppBar(),
-      ),
-      key: _scaffoldKey,
+      appBar: _buildAppBar(),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Section
-            _buildTopSection(),
-            const SizedBox(height: 40),
-            
-            // Features Section
+            _buildHeroSection(),
+            const SizedBox(height: 50),
             _buildFeaturesSection(),
-            const SizedBox(height: 40),
-             Image.asset("assets/pic1.jpg"),
-            // Testimonials Section
+            const SizedBox(height: 50),
             _buildTestimonialsSection(),
-            const SizedBox(height: 40),
-            
-            // CTA Section
+            const SizedBox(height: 50),
             _buildCTASection(),
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // App Bar with Hamburger Menu
-  Widget _buildAppBar() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-      child: Row(
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // App Icon and Name on the Left
           Row(
             children: [
-              Icon(Icons.phone, color: Colors.blue),
-              SizedBox(width: 10),
+              const Icon(Icons.phone, color: Colors.blue),
+              const SizedBox(width: 10),
               Text(
                 'GG SMS Pool',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
                 ),
+              ),
+            ],
+          ),
+          
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBarButton(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: TextButton(
+        onPressed: () {},
+        style: TextButton.styleFrom(foregroundColor: Colors.blue[700]),
+        child: Text(label, style: const TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0072ff), Color(0xFF00c6ff)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Simplify SMS Verification',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'At GGSMSPool, we pride ourselves on providing the highest quality SMS verifications for your SMS verification needs.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18, color: Colors.white70),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: () {
+              final user = FirebaseAuth.instance.currentUser;
+              if (user != null) {
+                moveToPage(context, const HomePage(), true);
+              } else {
+                moveToPage(context, const LoginPage(), false);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.blue,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+            ),
+            child: const Text(
+              'Get Started',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
+            'Features',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            children: [
+              _buildFeatureCard(
+                icon: Icons.phone_android,
+                title: 'Non-VOIP Numbers',
+                description: 'Reliable non-VOIP numbers for verification.',
+              ),
+              _buildFeatureCard(
+                icon: Icons.message,
+                title: 'Instant Texts',
+                description: 'Receive SMS seamlessly in one place.',
+              ),
+              _buildFeatureCard(
+                icon: Icons.lock,
+                title: 'Privacy First',
+                description: 'Your data is secure and private.',
               ),
             ],
           ),
@@ -73,216 +161,195 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 
-  // Side Menu (Drawer)
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.phone, color: Colors.blue),
-                SizedBox(height: 10),
-                Text(
-                  'GG SMS Pool',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Instant non-VOIP numbers',
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home, color: Colors.blue),
-            title: const Text('Home'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.featured_play_list, color: Colors.blue),
-            title: const Text('Features'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.feedback, color: Colors.blue),
-            title: const Text('Testimonials'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.contact_support, color: Colors.blue),
-            title: const Text('Support'),
-            onTap: () {
-              Navigator.pop(context);
-            },
+  Widget _buildFeatureCard({required IconData icon, required String title, required String description}) {
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
-      ),
-    );
-  }
-
-  // Top Section
-  Widget _buildTopSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue, Colors.blueAccent], // Keep gradient for top section
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
       ),
       child: Column(
         children: [
-          const Text(
-            'GG SMS Pool',
-            style: TextStyle(
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-              color: Colors.white, // Keep text color for title
-            ),
+          CircleAvatar(
+            backgroundColor: Colors.blue[100],
+            radius: 30,
+            child: Icon(icon, size: 30, color: Colors.blue),
           ),
+          const SizedBox(height: 15),
+          Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600,color:Colors.black)),
           const SizedBox(height: 10),
-          const Text(
-            'At GGSMSPool, we pride ourselves on providing the highest quality SMS verifications for your SMS verification needs.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Colors.white), // Keep text color for description
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-            final user=  FirebaseAuth.instance.currentUser;
-            if(user!=null){
-              moveToPage(context, const HomePage(), true);
-            }
-            else{
-              
-              moveToPage(context, const LoginPage(), false);
-            }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue, // Unified button color
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            ),
-            child: const Text(
-              'Get Started',
-              style: TextStyle(
-                color: Colors.white, // Keep text color for button
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
+          Text(description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.black54)),
         ],
       ),
     );
   }
 
-  // Features Section
-  Widget _buildFeaturesSection() {
+  Widget _buildTestimonialsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Features',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          _buildFeatureTile(
-            icon: Icons.phone_android,
-            title: 'Non-VOIP Numbers',
-            description: 'Instant access to non-VOIP numbers for verification and privacy.',
-          ),
-          _buildFeatureTile(
-            icon: Icons.message,
-            title: 'Receive Texts Seamlessly',
-            description: 'Get your messages instantly in one place.',
-          ),
-          _buildFeatureTile(
-            icon: Icons.lock,
-            title: 'Privacy Guaranteed',
-            description: 'Your data and messages are secure and private.',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureTile({required IconData icon, required String title, required String description}) {
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 30,
-        backgroundColor: Colors.blue, // Unified color for feature tiles
-        child: Icon(icon, color: Colors.white, size: 30),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-      subtitle: Text(description, style: const TextStyle(fontSize: 16)),
-    );
-  }
-
-  // Testimonials Section
-  Widget _buildTestimonialsSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
             'What Our Users Say',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
-          _buildTestimonial(
-            avatar: 'assets/user2.jpg', // Replace with user avatar asset
-            name: 'Jessica K.',
-            text: 'GG SMS Pool makes it super easy to get verification numbers without hassle. Love it!',
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            children: [
+              _buildTestimonialCard(
+                avatar: 'assets/user1.jpg',
+                name: 'Jessica K.',
+                feedback: 'GG SMS Pool is super reliable and easy to use!',
+              ),
+              _buildTestimonialCard(
+                avatar: 'assets/user2.jpg',
+                name: 'David L.',
+                feedback: 'Privacy and simplicity at its best. Highly recommend!',
+              ),
+            ],
           ),
-          _buildTestimonial(
-            avatar: 'assets/user1.jpg',
-            name: 'David L.',
-            text: 'The privacy and ease of use are unbeatable. Highly recommend GG SMS Pool!',
+          const SizedBox(height: 10,),
+         Text(
+            "How ggsmspool works",
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+          ),
+          const SizedBox(height: 24),
+          // Step 1
+          _buildStepCard(
+            stepNumber: "01",
+            title: "Create an account",
+            description:
+                "First, you need to create an account on our website. After creating an account, log in to your account.",
+            icon: Icons.person_add,
+          ),
+          const SizedBox(height: 16),
+          // Step 2
+          _buildStepCard(
+            stepNumber: "02",
+            title: "Top Up",
+            description:
+                "After creating your account and logging in, top up your account with money.",
+            icon: Icons.account_balance_wallet,
+          ),
+          const SizedBox(height: 16),
+          // Step 3
+          _buildStepCard(
+            stepNumber: "03",
+            title: "Place Order",
+            description:
+                "Select the desired country and service. Copy the virtual number and use it to register an account. Wait for an SMS with a code on ggsmspool.",
+            icon: Icons.shopping_cart,
           ),
         ],
       ),
     );
   }
-
-  Widget _buildTestimonial({required String avatar, required String name, required String text}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+ Widget _buildStepCard({
+    required String stepNumber,
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Step number
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.blueAccent,
+              child: Text(
+                stepNumber,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Step details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Step icon
+            Icon(
+              icon,
+              color: Colors.blueAccent,
+              size: 28,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildTestimonialCard({required String avatar, required String name, required String feedback}) {
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           CircleAvatar(
             backgroundImage: AssetImage(avatar),
             radius: 30,
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold,color:Colors.black)),
                 const SizedBox(height: 5),
-                Text(text, style: const TextStyle(fontSize: 16)),
+                Text(feedback, style: const TextStyle(color: Colors.black54)),
               ],
             ),
           ),
@@ -291,21 +358,21 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 
-  // Call to Action Section
   Widget _buildCTASection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF00c6ff), Color(0xFF0072ff)],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+      ),
       child: Column(
         children: [
           const Text(
-            'Ready to get started?',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Sign up today and receive SMS with GG SMS Pool!',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18), // Default text color
+            'Ready to Get Started?',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -313,40 +380,17 @@ class _LandingPageState extends State<LandingPage> {
               moveToPage(context, const LoginPage(), true);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue, // Unified button color
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.blue,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(30),
               ),
             ),
-            child: const Text(
-              'Get Started',
-              style: TextStyle(fontSize: 18, color: Colors.white), // Keep text color for button
-            ),
+            child: const Text('Join Us Now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 30,),
-        //   RichText(
-        //   text: TextSpan(
-        //     children: [
-        //       const TextSpan(
-        //         text: 'This site was developed by ',
-        //         style: TextStyle(color: Colors.amber)
-        //       ),
-        //       TextSpan(
-        //         text: 'Efe Otega',
-        //         style: const TextStyle(color: Colors.blue),
-        //         recognizer: TapGestureRecognizer()..onTap = _launchURL,
-        //       ),
-        //     ],
-        //   ),
-        // ),
         ],
       ),
     );
-  }
-   Future<void> _launchURL() async {
-     html.window.open("https://efeotegadev.web.app", "_blank");
-      //await launchUrl(Uri.parse("https://efeotegadev.web.app"),mode: LaunchMode.externalApplication);
-    
   }
 }

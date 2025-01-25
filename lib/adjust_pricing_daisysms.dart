@@ -1,12 +1,18 @@
-class Service {
-  final String name;
-  final String code;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
-  Service({required this.name, required this.code});
+import 'daisy_services.dart';
+
+class PricingAdjustmentPageDaisySms extends StatefulWidget {
+  const PricingAdjustmentPageDaisySms({super.key});
+
+  @override
+  _PricingAdjustmentPageDaisySmsState createState() => _PricingAdjustmentPageDaisySmsState();
 }
 
-// Example service list
-final List<Service> services = [
+class _PricingAdjustmentPageDaisySmsState extends State<PricingAdjustmentPageDaisySms> {
+  // List of services (same as your provided services list)
+ final List<Service> services = [
   Service(name: '3Fun', code: 'auw'),
   Service(name: 'AARP Rewards', code: 'aarp'),
   Service(name: 'Amazon / AWS', code: 'am'),
@@ -166,3 +172,143 @@ final List<Service> services = [
   Service(name: 'Zalo', code: 'mj'),
   Service(name: 'Zyrtec', code: 'zyrtec'),
 ];
+
+
+  // Controller to handle the search input
+  final TextEditingController _searchController = TextEditingController();
+
+  // List of services to display based on search query
+  List<Service> _filteredServices = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initially, show all services
+    _filteredServices = services;
+
+    // Listen to search text changes
+    _searchController.addListener(_filterServices);
+  }
+
+  // Filter services based on the input
+  void _filterServices() {
+    setState(() {
+      _filteredServices = services
+          .where((service) => service.name.toLowerCase().contains(
+              _searchController.text.toLowerCase()))
+          .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Search for a Service'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search for a service...',
+                border: OutlineInputBorder(),
+                suffixIcon: Icon(Icons.search),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _filteredServices.length,
+              itemBuilder: (context, index) {
+                final service = _filteredServices[index];
+                return ListTile(
+                  title: Text(service.name),
+                  onTap: () {
+                    // You can navigate to a new page to set the price
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SetPricePage(service: service),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SetPricePage extends StatelessWidget {
+  final Service service;
+  const SetPricePage({super.key, required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    TextEditingController priceController = TextEditingController();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Set Price for ${service.name}'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text('Enter the price for ${service.name}:'),
+            TextField(
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Price',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                final price = int.tryParse(priceController.text);
+                if (price != null) {
+                  // Save the price to Firebase Firestore
+                  savePriceToFirestore(context,service, price);
+                }
+              },
+              child: const Text('Save Price'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Save the price to Firestore
+  Future<void> savePriceToFirestore(BuildContext context,Service service, int price) async {
+    final firestore = FirebaseFirestore.instance;
+
+    await firestore.collection('ggsms_prices_daisysms').doc('United States').set({
+      'name':"United States",
+      'prices': {
+        service.name: price,
+      },
+    }, SetOptions(merge: true));
+    Navigator.of(context).pop();
+ScaffoldMessenger.of(context)
+          .showSnackBar( SnackBar(content: Text('Price saved for ${service.name}: $price')));
+   
+    
+  }
+}
+

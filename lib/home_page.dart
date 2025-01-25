@@ -214,121 +214,216 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showNumberOptions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Server'),
+          content: const Text('Choose the type of numbers you want to buy:'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+                moveToPage(
+                  context,
+                  const USNumbersPage(),
+                  false,
+                ); // Navigate to the US Numbers page
+              },
+              child: const Text('US Numbers'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+                moveToPage(
+                  context,
+                  const BuyNumbersPageSmsPool(),
+                  false,
+                ); // Navigate to the Other Numbers page
+              },
+              child: const Text('Other Numbers'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAction(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blueAccent),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, color: Colors.blueAccent),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.blueAccent),
+      title: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
-        width: MediaQuery.of(context).size.width * 0.6,
-        child: ListView(
-          padding: EdgeInsets.zero,
+        width: MediaQuery.of(context).size.width *
+            0.7, // Slightly wider for better usability
+        child: Column(
           children: [
+            // Drawer Header
             DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.blueAccent),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blueAccent, Colors.lightBlue],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.phone, color: Colors.white),
-                      SizedBox(width: 5),
-                      Text(
+                      const Icon(Icons.phone, color: Colors.white, size: 30),
+                      const SizedBox(width: 10),
+                      const Text(
                         'GG SMS Pool',
                         style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
                   Text(
                     'Hello, $userName',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.blueAccent),
-              title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.phone, color: Colors.blueAccent),
-              title: const Text('Buy Numbers'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Select Server'),
-                      //content: const Text('Choose the type of numbers you want to buy:'),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context); // Close the dialog
-                            moveToPage(context, const BuyNumbersPageSmsPool(),
-                                false); // Navigate to US Numbers
-                          },
-                          child: const Text('Server 1'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context); // Close the dialog
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                              content:
-                                  Text("Server 2 currently under maintenance"),
-                              backgroundColor: Colors.red,
-                            ));
-                            // moveToPage(context, const BuyNumbersPageSmsBus(),
-                            //     false); // Navigate to Other Numbers
-                          },
-                          child: const Text('Server 2'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Colors.blueAccent),
-              title: const Text('Payment History'),
-              onTap: () {
-                Navigator.pop(context);
-                moveToPage(context, const PaymentHistoryPage(), false);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Colors.blueAccent),
-              title: const Text('Number History'),
-              onTap: () {
-                Navigator.pop(context);
-                moveToPage(context, const NumberHistoryPage(), false);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.admin_panel_settings,
-                  color: Colors.blueAccent),
-              title: const Text('Contact Admin'),
-              onTap: () async {
-                Navigator.pop(context);
-                html.window.open("https://wa.me/+2349061968658", "_blank");
-                //await launchUrl(Uri.parse("https://wa.me/+2349061968658"),mode: LaunchMode.externalApplication);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.blueAccent),
-              title: const Text('Logout'),
-              onTap: () async {
-                await FirebaseAuth.instance.signOut();
-                moveToPage(context, const LandingPage(), true);
-              },
+
+            // Drawer Items
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.home,
+                    text: 'Home',
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.phone,
+                    text: 'Buy Numbers',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Select Server'),
+                            content: const Text(
+                                'Choose the type of numbers you want to buy:'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Close the dialog
+                                  moveToPage(
+                                      context, const USNumbersPage(), false);
+                                },
+                                child: const Text('US Numbers'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Close the dialog
+                                  moveToPage(context,
+                                      const BuyNumbersPageSmsPool(), false);
+                                },
+                                child: const Text('Other Countries'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.history,
+                    text: 'Payment History',
+                    onTap: () {
+                      Navigator.pop(context);
+                      moveToPage(context, const PaymentHistoryPage(), false);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.history,
+                    text: 'Number History',
+                    onTap: () {
+                      Navigator.pop(context);
+                      moveToPage(context, const NumberHistoryPage(), false);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.admin_panel_settings,
+                    text: 'Contact Admin',
+                    onTap: () {
+                      Navigator.pop(context);
+                      html.window
+                          .open("https://wa.me/+2349061968658", "_blank");
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.logout,
+                    text: 'Logout',
+                    onTap: () async {
+                      await FirebaseAuth.instance.signOut();
+                      moveToPage(context, const LandingPage(), true);
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -340,24 +435,21 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.menu, color: Colors.blueAccent),
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-                  const Spacer(),
-                  const Row(
-                    children: [
-                      Icon(Icons.phone, color: Colors.blue),
-                      SizedBox(width: 5),
-                      Text(
-                        'GG SMS Pool',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 20),
-                      ),
-                    ],
+                  const Text(
+                    'GG SMS Pool',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.blue,
+                    ),
                   ),
-                  const Spacer(),
+                  const Icon(Icons.phone, color: Colors.blue),
                 ],
               ),
               const SizedBox(height: 24),
@@ -373,9 +465,10 @@ class _HomePageState extends State<HomePage> {
                       Text(
                         'Welcome, $userName!',
                         style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueAccent),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -389,99 +482,29 @@ class _HomePageState extends State<HomePage> {
                           Text(
                             '₦$balance',
                             style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blueAccent),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueAccent,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          InkWell(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: const Text('Select Server'),
-                                    //content: const Text('Choose the type of numbers you want to buy:'),
-                                    actions: [
-                                       TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(
-                                              context); // Close the dialog
-                                          
-                                          moveToPage(
-                                              context,
-                                              const USNumbersPage(),
-                                              false); // Navigate to Other Numbers
-                                        },
-                                        child: const Text('US Numbers'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(
-                                              context); // Close the dialog
-                                          moveToPage(
-                                              context,
-                                              const BuyNumbersPageSmsPool(),
-                                              false); // Navigate to US Numbers
-                                        },
-                                        child: const Text('Other Numbers'),
-                                      ),
-                                      // TextButton(
-                                      //   onPressed: () {
-                                      //     // Close the dialog
-                                      //     ScaffoldMessenger.of(context)
-                                      //         .showSnackBar(const SnackBar(
-                                      //       content: Text(
-                                      //           "Server 2 currently under maintenance"),
-                                      //       backgroundColor: Colors.red,
-                                      //     ));
-                                      //     // moveToPage(
-                                      //     //     context,
-                                      //     //     const BuyNumbersPageSmsBus(),
-                                      //     //     false); // Navigate to Other Numbers
-                                      //   },
-                                      //   child: const Text('Server 2'),
-                                      // ),
-                                     
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            child: const Row(
-                              children: [
-                                Icon(Icons.shopping_cart,
-                                    color: Colors.blueAccent),
-                                SizedBox(width: 5),
-                                Text(
-                                  'Buy Numbers',
-                                  style: TextStyle(
-                                      fontSize: 16, color: Colors.blueAccent),
-                                ),
-                              ],
-                            ),
+                          _buildAction(
+                            context,
+                            icon: Icons.shopping_cart,
+                            label: 'Buy Numbers',
+                            onTap: () => _showNumberOptions(context),
                           ),
-                          const Spacer(),
-                          InkWell(
-                            onTap: () {
-                              moveToPage(
-                                  context, const ManualPaymentPage(), false);
-                            },
-                            child: const Row(
-                              children: [
-                                Icon(Icons.add, color: Colors.blueAccent),
-                                SizedBox(width: 5),
-                                Text(
-                                  'Fund Account',
-                                  style: TextStyle(
-                                      fontSize: 16, color: Colors.blueAccent),
-                                ),
-                              ],
-                            ),
+                          _buildAction(
+                            context,
+                            icon: Icons.add,
+                            label: 'Fund Account',
+                            onTap: () => moveToPage(
+                                context, const ManualPaymentPage(), false),
                           ),
                         ],
                       ),
@@ -493,9 +516,10 @@ class _HomePageState extends State<HomePage> {
               const Text(
                 'Payment History',
                 style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
               ),
               const SizedBox(height: 8),
               Text("Total Deposited: ₦$totalDeposited"),

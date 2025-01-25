@@ -395,6 +395,7 @@ class _BuyNumbersPageSmsBusState extends State<BuyNumbersPageSmsBus> {
         'orderId': orderId,
         'server': "smsbus",
         'price': displayedPrice,
+        "status":1,
         'date': FieldValue.serverTimestamp(),
       });
 
@@ -405,6 +406,9 @@ class _BuyNumbersPageSmsBusState extends State<BuyNumbersPageSmsBus> {
   }
 
   void _onProceed() async {
+    if(isLoading){
+      return;
+    }
     setState(() {
       isLoading = true;
     });
@@ -671,7 +675,9 @@ class _BuyNumbersPageSmsBusState extends State<BuyNumbersPageSmsBus> {
             ),
             const SizedBox(height: 16),
             // Proceed Button
-            ElevatedButton(
+           isLoading?const CircularProgressIndicator(
+                      color: Colors.white,
+                    ): ElevatedButton(
               onPressed: _onProceed,
               style: ElevatedButton.styleFrom(
                 padding:
@@ -680,11 +686,7 @@ class _BuyNumbersPageSmsBusState extends State<BuyNumbersPageSmsBus> {
                     borderRadius: BorderRadius.circular(8)),
                 backgroundColor: Colors.blueAccent,
               ),
-              child: isLoading
-                  ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                  : const Text('Proceed', style: TextStyle(fontSize: 16)),
+              child:const Text('Proceed', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

@@ -59,9 +59,9 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
 
       yield result; // Emit the initial result
 
-      // Continue emitting every 5 seconds only if the result is "SMS pending"
-      while (result == "SMS pending") {
-        await Future.delayed(const Duration(seconds: 5));
+      // Continue emitting every 3 seconds only if the result is "SMS pending" or "waiting for code"
+      while (result == "SMS pending"||result=="waiting for code") {
+        await Future.delayed(const Duration(seconds: 3));
 
         result = await generateCode(
           server: server,
@@ -78,22 +78,21 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     }
   }
 
-  Future<bool> refundBalance(String amount) async {
+  Future<void> refundBalance(String amount) async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print("User is not logged in.");
-        return false;
       }
 
       // Fetch the user's current balance
       final userDocRef =
-          FirebaseFirestore.instance.collection('ggsms_users').doc(user.email);
+          FirebaseFirestore.instance.collection('ggsms_users').doc(user!.email);
       final userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
         print("User document not found.");
-        return false;
+        return;
       }
 
       // Get the user's current balance
@@ -104,12 +103,9 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
 
       // Update the balance in Firestore
       await userDocRef.update({'balance': newBalance});
-
-      print("Balance refunded successfully. New balance: $newBalance");
-      return true;
+      setState(() {});
     } catch (e) {
       print("Error refunding balance: $e");
-      return false;
     }
   }
 
@@ -138,7 +134,6 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
         // Update the status field to "void"
         await purchasedNumberRef.update({'status': 99});
         await refundBalance(amount);
-        setState(() {});
       } else {
         print("OrderId not found in the database.");
       }
@@ -240,17 +235,26 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
       final result = await proxy.setStatus(
           apiKey: "X8PiPQWlxSKYSNcOOWBwYOaze6hgkZ", id: orderId, status: 8);
       print(result);
-      if (result == "ACCESS_CANCEL") {
+      String sss = await getDaisySms(orderId);
+      if (result == "ACCESS_CANCEL" &&
+          ((await getDaisySms(orderId) == "waiting for code") ||
+              (await getDaisySms(orderId) == "order cancelled"))) {
         print("Request successfully canceled.");
-
         // You can show a dialog or message indicating success
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Request canceled successfully.'),
           backgroundColor: Colors.green,
         ));
         await _updateStatusToVoid(orderId, amount);
-      }
-      if (result == "ACCESS_READY") {
+      } else if (sss.contains("Failed to fetch code")) {
+        print("Request successfully canceled.");
+        // You can show a dialog or message indicating success
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Request canceled successfully.'),
+          backgroundColor: Colors.green,
+        ));
+        await _updateStatusToVoid(orderId, amount);
+      } else if (result == "ACCESS_READY") {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Failed to cancel the request.'),
           backgroundColor: Colors.red,
@@ -536,6 +540,11 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
                                           alignment: Alignment.centerRight,
                                           child: TextButton(
                                             onPressed: () async {
+                                              if (hasTenSecondsElapsed(date) &&
+                                                  server == "daisysms") {
+                                                cancelSms(
+                                                    orderId, price, server);
+                                              }
                                               if (hasFiveMinutesElapsed(date)) {
                                                 try {
                                                   String result =
@@ -684,6 +693,11 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
     }
     if (server == "daisysms") {
       String sms = await getDaisySms(orderId);
+      if (sms != "order cancelled" &&
+          sms != "waiting for code" &&
+          !sms.contains("Failed to fetch code")) {
+        await docRef.update({'sms': sms, 'status': 3});
+      }
       return sms;
     } else if (server == "smspool") {
       try {
@@ -762,5 +776,22 @@ class _NumberHistoryPageState extends State<NumberHistoryPage> {
       print("Error parsing date: $e");
       return false; // Return false if parsing fails
     }
+  }
+}
+
+bool hasTenSecondsElapsed(String dateString) {
+  try {
+    // Replace non-breaking spaces with regular spaces
+    final sanitizedDate = dateString.replaceAll('\u202F', ' ');
+
+    // Parse the input date string
+    final dateTime =
+        DateFormat("MMM d, yyyy h:mm a").parse(sanitizedDate).toLocal();
+
+    // Check if 5 minutes have elapsed
+    return DateTime.now().difference(dateTime).inSeconds >= 10;
+  } catch (e) {
+    print("Error parsing date: $e");
+    return false; // Return false if parsing fails
   }
 }
